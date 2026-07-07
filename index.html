@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Pre&Mo - Pendidikan Informatika</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            epBlue: '#0B3A75',
+            epBlue2: '#082B58',
+            epRed: '#E21B2D',
+            epSoft: '#F5F7FB'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Inter, system-ui, sans-serif; background: #F5F7FB; color: #172033; }
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    .nav-active { background: #E21B2D; color: #fff; box-shadow: 0 10px 22px rgba(226,27,45,.24); }
+    .lab-grid { display: grid; grid-template-columns: repeat(5, minmax(82px, 1fr)); gap: 16px 24px; }
+    .pc-seat { min-height: 90px; position: relative; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .desk { width: 74px; height: 28px; background: linear-gradient(#d7a35e,#bd8240); border-radius: 5px; box-shadow: 0 5px 0 #7b542b; }
+    .monitor { width: 54px; height: 38px; border: 3px solid #111827; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; background: #e5e7eb; color: #111827; margin-bottom: -6px; z-index: 2; }
+    .monitor.used { background: #1FA34A; color: #fff; }
+    .monitor.maintenance { background: #E21B2D; color: #fff; }
+    .monitor.selected { outline: 4px solid #1D4ED8; outline-offset: 2px; }
+    .chair { width: 30px; height: 23px; background: #111827; border-radius: 7px 7px 10px 10px; margin-top: -10px; z-index: 3; }
+    .status-dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    .btn { border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 800; transition: .2s; }
+    .btn-primary { background: #0B3A75; color: white; }
+    .btn-primary:hover { background: #082B58; }
+    .btn-danger { background: #E21B2D; color: white; }
+    .btn-light { background: #fff; color: #0B3A75; border: 1px solid #D8E0EF; }
+    .field { width: 100%; border: 1px solid #D8E0EF; border-radius: 8px; padding: 10px 12px; font-size: 13px; background: #fff; outline: none; }
+    .field:focus { border-color: #0B3A75; box-shadow: 0 0 0 3px rgba(11,58,117,.12); }
+    .card { background: #fff; border: 1px solid #DDE5F2; border-radius: 8px; box-shadow: 0 10px 22px rgba(15,23,42,.05); }
+    #sidebar { transition: transform .25s ease; }
+    #mobileOverlay { transition: opacity .2s ease; }
+    @media (max-width: 1024px) { .lab-grid { grid-template-columns: repeat(3, minmax(76px, 1fr)); gap: 14px; } }
+    @media (max-width: 768px) {
+      body { background: #F5F7FB; }
+      #sidebar { transform: translateX(-100%); width: min(82vw, 320px); z-index: 50; }
+      #sidebar.open { transform: translateX(0); }
+      #mobileOverlay.open { display: block; opacity: 1; }
+      .app-main { margin-left: 0 !important; }
+      .app-header { height: auto; min-height: 64px; padding: 10px 14px; gap: 10px; align-items: flex-start; }
+      .app-title { font-size: 16px; line-height: 1.2; }
+      .app-subtitle { display: none; }
+      .app-actions { gap: 8px; }
+      .app-actions .session-label { display: none; }
+      .content-wrap { padding: 14px 12px 18px; }
+      footer.app-footer { grid-template-columns: 1fr; padding: 18px; font-size: 12px; }
+      .card { border-radius: 8px; }
+      .btn { min-height: 42px; width: 100%; display: inline-flex; align-items: center; justify-content: center; white-space: normal; text-align: center; }
+      .field { font-size: 14px; min-height: 42px; }
+      table .btn { margin: 2px 0; padding: 8px 10px; min-height: 36px; }
+      .swal2-popup { width: min(94vw, 420px) !important; }
+      .swal2-input, .swal2-select { width: 84% !important; max-width: 320px !important; }
+      .xl\:grid-cols-\[380px_1fr\] { grid-template-columns: 1fr !important; }
+      .lg\:grid-cols-\[360px_1fr\] { grid-template-columns: 1fr !important; }
+      #pcDetail .sticky { position: static !important; top: auto !important; }
+      #reportTable, #view-ruangan, #view-dosen, #view-mahasiswa, #view-pengguna-khusus { max-width: 100%; overflow-x: hidden; }
+    }
+    @media (max-width: 640px) {
+      .lab-grid { grid-template-columns: repeat(2, minmax(88px, 1fr)); gap: 16px 10px; }
+      .pc-seat { min-height: 86px; }
+      .desk { width: 68px; }
+      .monitor { width: 50px; height: 34px; font-size: 14px; }
+      .table-scroll table { min-width: 620px !important; }
+    }
+    @media (max-width: 380px) {
+      .lab-grid { grid-template-columns: repeat(2, minmax(78px, 1fr)); gap: 14px 8px; }
+      .desk { width: 62px; }
+      .monitor { width: 46px; height: 32px; }
+    }
+    @media print {
+      body { background: #fff; }
+      aside, header, footer, #mobileOverlay, #view-qr-komputer > .card:first-child, #view-pembuatan-qr > .card:first-child { display: none !important; }
+      .app-main { margin-left: 0 !important; }
+      .content-wrap { padding: 0 !important; }
+      .view-section { display: none !important; }
+      #view-qr-komputer, #view-pembuatan-qr { display: block !important; }
+      #qrComputerGrid, #adminQrGrid { display: grid !important; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .card { box-shadow: none !important; border: 1px solid #111827 !important; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginPage" class="min-h-screen grid lg:grid-cols-[1fr_460px] bg-white">
+    <section class="relative min-h-[42vh] lg:min-h-screen bg-epBlue text-white overflow-hidden">
+      <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(226,27,45,.88),rgba(11,58,117,.8)_42%,rgba(8,43,88,.95))]"></div>
+      <div class="relative z-10 h-full flex flex-col justify-between p-8 lg:p-12">
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-lg bg-white/12 border border-white/30 flex items-center justify-center overflow-hidden">
+            <img data-logo class="hidden w-full h-full object-contain p-1" alt="Logo E-Pre&Mo">
+            <span data-logo-fallback class="text-[10px] font-bold text-center leading-tight">RUANG<br>LOGO</span>
+          </div>
+          <div>
+            <h1 class="text-3xl font-extrabold tracking-tight">E-Pre&Mo</h1>
+            <p class="text-sm font-semibold text-blue-100">Pendidikan Informatika</p>
+          </div>
+        </div>
+        <div class="max-w-2xl">
+          <p class="text-xs uppercase tracking-[.22em] text-blue-100 font-bold mb-4">Electronic Presence & Monitoring</p>
+          <h2 class="text-4xl lg:text-6xl font-extrabold leading-tight">Presensi dan monitoring laboratorium komputer berbasis QR Code.</h2>
+          <p class="mt-5 text-blue-50 max-w-xl">Data penggunaan ruangan, posisi komputer, dosen penanggung jawab, serta keperluan materi, praktik, dan penelitian dipantau secara real-time.</p>
+        </div>
+        <p class="text-xs text-blue-100">Program Studi Pendidikan Informatika, Fakultas Saintek, Universitas IVET Semarang</p>
+      </div>
+    </section>
+    <section class="flex items-center justify-center p-6 lg:p-10">
+      <div class="w-full max-w-md">
+        <div class="mb-8">
+          <h2 class="text-2xl font-extrabold text-slate-900">Masuk Aplikasi</h2>
+          <p class="text-sm text-slate-500 mt-1">Pilih jenis pengguna sesuai akses sistem.</p>
+        </div>
+        <div class="bg-slate-100 p-1 rounded-lg grid grid-cols-2 gap-1 mb-6">
+          <button id="btnMahasiswaTab" onclick="switchLoginTab('mahasiswa')" class="flex-1 btn bg-white text-epBlue"><i class="fa-solid fa-user-graduate mr-2"></i>Mahasiswa</button>
+          <button id="btnKhususTab" onclick="switchLoginTab('khusus')" class="flex-1 btn text-slate-500"><i class="fa-solid fa-id-badge mr-2"></i>Pengguna Khusus</button>
+          <button id="btnDosenTab" onclick="switchLoginTab('dosen')" class="flex-1 btn text-slate-500"><i class="fa-solid fa-user-tie mr-2"></i>Dosen</button>
+          <button id="btnAdminTab" onclick="switchLoginTab('admin')" class="flex-1 btn text-slate-500"><i class="fa-solid fa-user-shield mr-2"></i>Admin</button>
+        </div>
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div id="formMahasiswaLogin">
+            <label class="text-xs font-bold uppercase text-slate-500">NIM Mahasiswa</label>
+            <input id="nim" class="field mt-2" placeholder="Contoh: 221501001">
+          </div>
+          <div id="formStaffLogin" class="hidden space-y-4">
+            <div>
+              <label class="text-xs font-bold uppercase text-slate-500">Username</label>
+              <input id="username" class="field mt-2" placeholder="Username">
+            </div>
+            <div>
+              <label class="text-xs font-bold uppercase text-slate-500">Password</label>
+              <input id="password" type="password" class="field mt-2" placeholder="Password">
+            </div>
+          </div>
+          <div id="formKhususLogin" class="hidden space-y-4">
+            <label class="text-xs font-bold uppercase text-slate-500">QR Login Pengguna Khusus</label>
+            <textarea id="specialQrText" class="field mt-2" placeholder="Tempel hasil scan QR khusus dari admin"></textarea>
+            <button type="button" onclick="openScanner()" class="btn btn-primary w-full">Scan QR Pengguna Khusus</button>
+            <p class="text-xs text-slate-500">QR khusus dibuat dan dicetak oleh admin. Setelah login, isi formulir registrasi penggunaan.</p>
+          </div>
+          <button class="btn btn-danger w-full text-base" type="submit">Masuk E-Pre&Mo</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <div id="appPage" class="hidden min-h-screen">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-epBlue text-white z-30 flex flex-col">
+      <div class="h-20 px-5 flex items-center gap-3 border-b border-white/10">
+        <div class="w-12 h-12 rounded-lg border border-white/30 bg-white/10 flex items-center justify-center overflow-hidden">
+          <img data-logo class="hidden w-full h-full object-contain p-1" alt="Logo E-Pre&Mo">
+          <span data-logo-fallback class="text-[9px] font-bold leading-tight text-center">RUANG<br>LOGO</span>
+        </div>
+        <div>
+          <h1 class="text-2xl font-extrabold">E-Pre&Mo</h1>
+          <p class="text-xs text-blue-100 font-semibold">Pendidikan Informatika</p>
+        </div>
+      </div>
+      <div class="p-4">
+        <div class="bg-white/10 border border-white/10 rounded-lg p-3">
+          <p id="navUserName" class="font-bold text-sm truncate">Pengguna</p>
+          <p id="navUserRole" class="text-[10px] uppercase tracking-widest text-blue-100">Role</p>
+        </div>
+      </div>
+      <nav id="sidebarMenu" class="flex-1 px-3 space-y-1 text-sm"></nav>
+      <button onclick="logout()" class="m-4 btn bg-white/10 hover:bg-epRed text-white text-left"><i class="fa-solid fa-right-from-bracket mr-2"></i>Keluar</button>
+    </aside>
+    <div id="mobileOverlay" onclick="closeMobileMenu()" class="hidden fixed inset-0 bg-slate-950/55 opacity-0 z-40 md:hidden"></div>
+
+    <main class="app-main ml-64 min-h-screen flex flex-col">
+      <header class="app-header h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20">
+        <div class="flex items-start gap-3 min-w-0">
+          <button onclick="toggleMobileMenu()" class="md:hidden btn btn-light px-3 py-2 shrink-0" aria-label="Buka menu"><i class="fa-solid fa-bars"></i></button>
+          <div class="min-w-0">
+            <h2 id="pageTitle" class="app-title text-xl font-extrabold text-slate-900 truncate">Dashboard</h2>
+            <p class="app-subtitle text-xs text-slate-500">Sistem Informasi Presensi dan Monitoring Penggunaan Ruangan Laboratorium Komputer</p>
+          </div>
+        </div>
+        <div class="app-actions flex items-center gap-4 text-xs font-bold shrink-0">
+          <div><span class="status-dot bg-red-600 mr-2"></span><span class="session-label">Sesi Aktif </span><span id="clock">--:--:--</span></div>
+          <button onclick="refreshCurrentView()" class="btn btn-light"><i class="fa-solid fa-rotate md:mr-2"></i><span class="hidden md:inline">Refresh</span></button>
+          <button onclick="logout()" class="btn btn-danger md:hidden"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+      </header>
+
+      <div class="content-wrap flex-1 p-6 pb-4">
+        <section id="view-dashboard" class="view-section active"></section>
+        <section id="view-monitoring" class="view-section"></section>
+        <section id="view-presensi" class="view-section"></section>
+        <section id="view-pemesanan" class="view-section"></section>
+        <section id="view-qr-komputer" class="view-section"></section>
+        <section id="view-pembuatan-qr" class="view-section"></section>
+        <section id="view-laporan" class="view-section"></section>
+        <section id="view-profil" class="view-section"></section>
+        <section id="view-mahasiswa" class="view-section"></section>
+        <section id="view-dosen" class="view-section"></section>
+        <section id="view-pengguna-khusus" class="view-section"></section>
+        <section id="view-ruangan" class="view-section"></section>
+      </div>
+
+      <footer class="app-footer bg-epBlue text-white px-8 py-5 grid md:grid-cols-3 gap-4 text-sm">
+        <div class="flex gap-3">
+          <div class="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden">
+            <img data-logo class="hidden w-full h-full object-contain p-1" alt="Logo E-Pre&Mo">
+            <span data-logo-fallback class="text-[9px] text-center leading-tight">LOGO</span>
+          </div>
+          <div>
+            <p class="font-bold">Program Studi Pendidikan Informatika</p>
+            <p>Fakultas Saintek</p>
+            <p>Universitas IVET Semarang</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <i class="fa-solid fa-location-dot mt-1"></i>
+          <p>X9HX+RJQ, Jl. Pawiyatan Luhur IV No.16, Bendan Duwur, Kec. Gajahmungkur, Kota Semarang, Jawa Tengah 50235</p>
+        </div>
+        <div class="space-y-1">
+          <p><i class="fa-solid fa-phone mr-2"></i><a class="underline" target="_blank" href="https://www.google.com/search?q=alamat+ivet&rlz=1C1ONGR_enID1086ID1086&oq=alamat+ivet&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDIICAIQABgWGB4yCAgDEAAYFhgeMgoIBBAAGIAEGKIEMgcIBRAAGO8F0gEIMzUwN2owajeoAgCwAgA&sourceid=chrome&ie=UTF-8#">0858-0000-8145</a></p>
+          <p><i class="fa-solid fa-globe mr-2"></i><a class="underline" target="_blank" href="http://pmb.unisvet.ac.id/">pmb.unisvet.ac.id</a></p>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <div id="loading" class="hidden fixed inset-0 z-50 bg-white/70 backdrop-blur-sm items-center justify-center">
+    <div class="card p-6 text-center">
+      <div class="w-10 h-10 mx-auto rounded-full border-4 border-slate-200 border-t-epRed animate-spin"></div>
+      <p class="mt-3 text-sm font-bold text-slate-600">Memuat data...</p>
+    </div>
+  </div>
+
+<script>
+let currentUser = null;
+let token = localStorage.getItem('epremo_token') || '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyt3sKcFnZfhQ7gCM9ygcdlQnhnEHSM9N5aA1T3fKcBKsUnMuB32cduB_L1kBF7aq3L3Q/exec';
+let currentView = 'dashboard';
+let rooms = [];
+let subjects = [];
+let monitoringRoom = '';
+let selectedComputer = null;
+let currentMonitoringComputers = [];
+let monitorTimer = null;
+let loginMode = 'mahasiswa';
+let DEPLOYMENT_URL = 'scanner.html';
+let lastQrTs = 0;
+let pendingRoomQr = '';
+let pendingRoomCode = '';
+
+const menuByRole = {
+  admin: [
+    ['dashboard','Dashboard','fa-gauge-high'],
+    ['monitoring','Monitoring Lab','fa-display'],
+    ['pembuatan-qr','Pembuatan QR Code','fa-qrcode'],
+    ['laporan','Laporan & Arsip','fa-file-export'],
+    ['mahasiswa','Mahasiswa','fa-user-graduate'],
+    ['dosen','Dosen','fa-user-tie'],
+    ['pengguna-khusus','Pengguna Khusus','fa-id-badge'],
+    ['ruangan','Ruangan & Komputer','fa-building']
+  ],
+  dosen: [
+    ['dashboard','Dashboard','fa-gauge-high'],
+    ['monitoring','Monitoring Lab','fa-display'],
+    ['pemesanan','Pemesanan Ruangan','fa-calendar-check'],
+    ['laporan','Laporan & Arsip','fa-file-export'],
+    ['profil','Profil Dosen','fa-user-tie']
+  ],
+  mahasiswa: [
+    ['dashboard','Dashboard','fa-gauge-high'],
+    ['monitoring','Monitoring Lab','fa-display'],
+    ['presensi','Presensi QR Code','fa-qrcode'],
+    ['profil','Profil Mahasiswa','fa-user-graduate']
+  ],
+  pengguna_khusus: [
+    ['dashboard','Dashboard','fa-gauge-high'],
+    ['monitoring','Monitoring Lab','fa-display'],
+    ['pemesanan','Registrasi Penggunaan','fa-clipboard-list'],
+    ['profil','Profil Pengguna','fa-id-badge']
+  ]
+};
+
+function gs(fn, ...args) {
+  if (!API_URL || API_URL === 'ISI_URL_WEB_APP_APPS_SCRIPT_ANDA') {
+    return Promise.resolve({ success: false, message: 'API_URL belum diisi dengan URL Web App Google Apps Script.' });
+  }
+  return new Promise((resolve, reject) => {
+    const callback = 'epremo_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const sep = API_URL.indexOf('?') >= 0 ? '&' : '?';
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('API tidak merespons. Periksa URL Web App Apps Script.'));
+    }, 30000);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[callback];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callback] = data => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('Gagal menghubungi API Apps Script.'));
+    };
+
+    script.src = API_URL + sep + 'action=' + encodeURIComponent(fn) +
+      '&args=' + encodeURIComponent(JSON.stringify(args)) +
+      '&callback=' + encodeURIComponent(callback) +
+      '&_=' + Date.now();
+    document.head.appendChild(script);
+  });
+}
+
+function showLoading(show = true) {
+  document.getElementById('loading').classList.toggle('hidden', !show);
+  document.getElementById('loading').classList.toggle('flex', show);
+}
+
+function switchLoginTab(mode) {
+  loginMode = mode;
+  document.getElementById('formMahasiswaLogin').classList.toggle('hidden', mode !== 'mahasiswa');
+  document.getElementById('formStaffLogin').classList.toggle('hidden', mode !== 'dosen' && mode !== 'admin');
+  document.getElementById('formKhususLogin').classList.toggle('hidden', mode !== 'khusus');
+  document.getElementById('btnMahasiswaTab').className = mode === 'mahasiswa' ? 'flex-1 btn bg-white text-epBlue' : 'flex-1 btn text-slate-500';
+  document.getElementById('btnDosenTab').className = mode === 'dosen' ? 'flex-1 btn bg-white text-epBlue' : 'flex-1 btn text-slate-500';
+  document.getElementById('btnAdminTab').className = mode === 'admin' ? 'flex-1 btn bg-white text-epBlue' : 'flex-1 btn text-slate-500';
+  document.getElementById('btnKhususTab').className = mode === 'khusus' ? 'flex-1 btn bg-white text-epBlue' : 'flex-1 btn text-slate-500';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  showLoading();
+  try {
+    let res;
+    if (loginMode === 'mahasiswa') {
+      res = await gs('login', '', '', document.getElementById('nim').value.trim());
+    } else if (loginMode === 'khusus') {
+      res = await gs('loginSpecialQr', document.getElementById('specialQrText').value.trim());
+    } else {
+      res = await gs('login', document.getElementById('username').value.trim(), document.getElementById('password').value, '');
+      if (res.success && res.role !== loginMode) {
+        res = { success: false, message: 'Akun ini bukan role ' + loginMode + '.' };
+      }
+    }
+    showLoading(false);
+    if (!res.success) return Swal.fire('Gagal Masuk', res.message, 'error');
+    token = res.token;
+    currentUser = res;
+    localStorage.setItem('epremo_token', token);
+    localStorage.setItem('epremo_user', JSON.stringify(res));
+    bootApp();
+  } catch (err) {
+    showLoading(false);
+    Swal.fire('Error', String(err), 'error');
+  }
+}
+
+function bootApp() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('appPage').classList.remove('hidden');
+  document.getElementById('navUserName').textContent = currentUser.nama;
+  document.getElementById('navUserRole').textContent = currentUser.role;
+  renderMenu();
+  const savedView = localStorage.getItem('epremo_last_view_' + currentUser.role) || 'dashboard';
+  preloadData().then(() => showView(savedView));
+}
+
+function renderMenu() {
+  const menu = menuByRole[currentUser.role] || menuByRole.mahasiswa;
+  document.getElementById('sidebarMenu').innerHTML = menu.map(m => `
+    <button id="menu-${m[0]}" onclick="showView('${m[0]}')" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-white/10">
+      <i class="fa-solid ${m[2]} w-5 text-center"></i><span>${m[1]}</span>
+    </button>`).join('');
+}
+
+function toggleMobileMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('mobileOverlay').classList.toggle('open');
+}
+
+function closeMobileMenu() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('mobileOverlay').classList.remove('open');
+}
+
+async function preloadData() {
+  const [r, s] = await Promise.all([gs('getRuanganList', token), gs('getMataKuliahList', token)]);
+  rooms = r.success ? r.data : [];
+  subjects = s.success ? s.data : [];
+  monitoringRoom = rooms[0]?.kode || '';
+}
+
+function showView(view) {
+  currentView = view;
+  if (currentUser) localStorage.setItem('epremo_last_view_' + currentUser.role, view);
+  closeMobileMenu();
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelectorAll('#sidebarMenu button').forEach(el => el.classList.remove('nav-active'));
+  const menu = document.getElementById('menu-' + view);
+  if (menu) menu.classList.add('nav-active');
+  document.getElementById('pageTitle').textContent = menu ? menu.textContent.trim() : 'E-Pre&Mo';
+  if (monitorTimer) clearInterval(monitorTimer);
+  if (view === 'dashboard') loadDashboard();
+  if (view === 'monitoring') loadMonitoring();
+  if (view === 'presensi') loadPresensi();
+  if (view === 'pemesanan') loadPemesanan();
+  if (view === 'qr-komputer') loadQrKomputer();
+  if (view === 'pembuatan-qr') loadPembuatanQr();
+  if (view === 'laporan') loadLaporan();
+  if (view === 'profil') loadProfil();
+  if (view === 'mahasiswa') loadMahasiswa();
+  if (view === 'dosen') loadDosen();
+  if (view === 'pengguna-khusus') loadPenggunaKhususAdmin();
+  if (view === 'ruangan') loadRuangan();
+}
+
+function refreshCurrentView() { showView(currentView); }
+
+async function loadDashboard() {
+  const wrap = document.getElementById('view-dashboard');
+  wrap.innerHTML = skeleton('Dashboard E-Pre&Mo');
+  const res = await gs('getDashboardData', token);
+  if (!res.success) return errorBox(wrap, res.message);
+  const d = res.data;
+  wrap.innerHTML = `
+    <div class="grid lg:grid-cols-[1fr_360px] gap-4 md:gap-6">
+      <div>
+        <div class="card p-5 md:p-6 mb-4 md:mb-6 bg-gradient-to-r from-epBlue to-epBlue2 text-white">
+          <p class="text-sm text-blue-100 font-semibold">Pengembangan Sistem Informasi Presensi dan Monitoring Penggunaan Ruangan Laboratorium Komputer Berbasis QR Code</p>
+          <h2 class="text-2xl md:text-3xl font-extrabold mt-2">E-Pre&Mo</h2>
+          <p class="mt-1">Pendidikan Informatika</p>
+        </div>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          ${statCard('Mahasiswa', d.mahasiswa, 'fa-user-graduate', 'text-epBlue')}
+          ${statCard('Dosen', d.dosen, 'fa-user-tie', 'text-epBlue')}
+          ${statCard('Ruangan Lab', d.ruangan, 'fa-building', 'text-epRed')}
+          ${statCard('Komputer', d.komputer, 'fa-display', 'text-epBlue')}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mt-3 md:mt-4">
+          ${statCard('Digunakan', d.digunakan, 'fa-circle-check', 'text-green-600')}
+          ${statCard('Kosong', d.kosong, 'fa-circle', 'text-slate-500')}
+          ${statCard('Maintenance', d.maintenance, 'fa-screwdriver-wrench', 'text-epRed')}
+        </div>
+      </div>
+      <div class="card p-5">
+        <h3 class="font-extrabold text-slate-900 mb-3">Profil Pengguna</h3>
+        <div class="space-y-3 text-sm">
+          ${infoRow('Nama', currentUser.nama)}
+          ${infoRow(currentUser.role === 'mahasiswa' ? 'NIM' : 'NIDN/Username', currentUser.identifier || currentUser.username)}
+          ${infoRow('Role', currentUser.role)}
+          ${currentUser.role === 'mahasiswa' ? infoRow('Semester', currentUser.semester || '-') : ''}
+          ${infoRow('Program Studi', currentUser.programStudi || 'Pendidikan Informatika')}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function loadMonitoring() {
+  const wrap = document.getElementById('view-monitoring');
+  wrap.innerHTML = monitoringShell();
+  await refreshMonitoringData();
+  monitorTimer = setInterval(refreshMonitoringData, 5000);
+}
+
+function monitoringShell() {
+  return `
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+        <select id="roomSelect" class="field w-full md:w-64" onchange="monitoringRoom=this.value;selectedComputer=null;refreshMonitoringData()">
+          ${rooms.map(r => `<option value="${r.kode}" ${r.kode === monitoringRoom ? 'selected' : ''}>${r.nama}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary sm:w-auto" onclick="refreshMonitoringData()">Tampilkan</button>
+      </div>
+      <div class="text-xs font-bold text-slate-600"><span class="status-dot bg-green-600 mr-2"></span>Auto refresh: 5 detik</div>
+    </div>
+    <div id="monitoringContent"></div>`;
+}
+
+async function refreshMonitoringData() {
+  if (!monitoringRoom && rooms[0]) monitoringRoom = rooms[0].kode;
+  const res = await gs('getMonitoringData', token, monitoringRoom);
+  const box = document.getElementById('monitoringContent');
+  if (!res.success) return errorBox(box, res.message);
+    const d = res.data;
+    currentMonitoringComputers = d.komputer || [];
+    box.innerHTML = `
+    <div class="grid xl:grid-cols-[1fr_340px] gap-4 md:gap-5">
+      <div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+          ${miniInfo('Ruangan', d.ruangan.nama, 'fa-building')}
+          ${miniInfo('Dosen', d.penggunaan.dosen, 'fa-user-tie')}
+          ${miniInfo('Mata Kuliah', d.penggunaan.mataKuliah, 'fa-book-open')}
+          ${miniInfo('Keperluan', d.penggunaan.keperluan, 'fa-clipboard-list')}
+        </div>
+        ${currentUser.role === 'admin' && d.penggunaan.status === 'Sedang Digunakan' ? `<button onclick="closeRoomManual('${d.ruangan.kode}')" class="btn btn-danger mb-4">Batalkan/Tutup Penggunaan Ruangan Manual</button>` : ''}
+        <div class="card p-3 md:p-5 overflow-auto">
+          <div class="mx-auto max-w-4xl min-w-[320px]">
+            <div class="h-10 bg-gradient-to-b from-slate-700 to-slate-900 rounded text-white flex items-center justify-center text-xs font-extrabold mb-6 shadow">MONITOR / LCD PROYEKTOR</div>
+            <div class="flex justify-between items-center mb-3">
+              <div class="w-16 md:w-20 h-24 md:h-28 border-l-8 border-amber-800 bg-amber-600 rounded-r flex items-center justify-center text-white text-xs font-bold">PINTU</div>
+              <div class="text-center">
+                <div class="w-24 md:w-32 h-10 md:h-12 bg-amber-500 rounded shadow mb-1"></div>
+                <p class="text-xs font-extrabold text-epBlue">MEJA DOSEN</p>
+              </div>
+            </div>
+            <div class="lab-grid">
+              ${d.komputer.map(pc => pcSeat(pc)).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="card p-4 mt-3 flex flex-wrap gap-3 md:gap-5 text-xs font-bold">
+          <span><span class="status-dot bg-green-600 mr-2"></span>Digunakan</span>
+          <span><span class="status-dot bg-slate-300 border mr-2"></span>Kosong</span>
+          <span><span class="status-dot bg-epRed mr-2"></span>Maintenance</span>
+          <span class="w-full md:w-auto md:ml-auto">Total ${d.ringkasan.total} | Digunakan ${d.ringkasan.digunakan} | Kosong ${d.ringkasan.kosong} | Maintenance ${d.ringkasan.maintenance} | Okupansi ${d.ringkasan.okupansi}%</span>
+        </div>
+      </div>
+      <div id="pcDetail">${renderPcDetail(d.komputer)}</div>
+    </div>`;
+}
+
+async function closeRoomManual(kodeRuangan) {
+  const ask = await Swal.fire({ title: 'Tutup penggunaan ruangan?', text: 'Gunakan jika dosen lupa mematikan proses penggunaan ruangan.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Tutup Manual' });
+  if (!ask.isConfirmed) return;
+  const res = await gs('closeRoomUsage', token, kodeRuangan);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) refreshMonitoringData();
+}
+
+function pcSeat(pc) {
+  const cls = pc.status === 'Digunakan' ? 'used' : pc.status === 'Maintenance' ? 'maintenance' : '';
+  const sel = selectedComputer && selectedComputer.nomor === pc.nomor ? 'selected' : '';
+  return `<button class="pc-seat" onclick='selectComputer(${pc.nomor})' title="Komputer ${pad2(pc.nomor)} - ${pc.status}">
+    <div class="monitor ${cls} ${sel}">${pad2(pc.nomor)}</div>
+    <div class="desk"></div>
+    <div class="chair"></div>
+  </button>`;
+}
+
+function selectComputer(nomor) {
+  selectedComputer = currentMonitoringComputers.find(pc => Number(pc.nomor) === Number(nomor)) || null;
+  document.querySelectorAll('.monitor.selected').forEach(el => el.classList.remove('selected'));
+  const detail = document.getElementById('pcDetail');
+  if (detail) detail.innerHTML = renderPcDetail(currentMonitoringComputers);
+  const btn = [...document.querySelectorAll('.pc-seat')].find(el => el.title && el.title.indexOf('Komputer ' + pad2(nomor)) >= 0);
+  if (btn) btn.querySelector('.monitor')?.classList.add('selected');
+}
+
+function renderPcDetail(list) {
+  const pc = selectedComputer || list.find(x => x.status === 'Digunakan') || list[0];
+  if (!pc) return '';
+  const isAdmin = currentUser.role === 'admin';
+  const isAvailable = pc.status === 'Kosong';
+  return `
+    <div class="card p-5 sticky top-20">
+      <h3 class="font-extrabold text-epBlue text-lg mb-4">Informasi Komputer</h3>
+      <div class="flex items-center gap-4 pb-4 border-b">
+        <div class="w-20 h-20 rounded-full bg-epBlue flex items-center justify-center">
+          <div class="monitor ${pc.status === 'Digunakan' ? 'used' : pc.status === 'Maintenance' ? 'maintenance' : ''}">${pad2(pc.nomor)}</div>
+        </div>
+        <div>
+          <h4 class="font-extrabold text-xl">Komputer ${pad2(pc.nomor)}</h4>
+          <p class="text-sm mt-1">Status: <span class="font-bold ${pc.status === 'Digunakan' ? 'text-green-600' : pc.status === 'Maintenance' ? 'text-epRed' : 'text-slate-500'}">${pc.status}</span></p>
+        </div>
+      </div>
+      <div class="py-3 space-y-3 text-sm">
+        ${infoRow('Pengguna', pc.pengguna || '-')}
+        ${infoRow('NIM/NIDN', pc.identifier || '-')}
+        ${infoRow('Jam Masuk', pc.jamMulai || '-')}
+        ${infoRow('Keperluan', pc.keperluan || '-')}
+        ${infoRow('Dosen', pc.dosen || '-')}
+      </div>
+      ${isAvailable && currentUser.role === 'dosen' ? `<button onclick="useComputer(${pc.nomor})" class="btn btn-primary w-full mb-2">Gunakan Komputer Ini</button>` : ''}
+      ${isAvailable && currentUser.role === 'mahasiswa' ? `<button onclick="openScanner()" class="btn btn-primary w-full mb-2">Scan QR di Meja Komputer</button>` : ''}
+      ${pc.status === 'Digunakan' ? `<button onclick="releaseSelected(${pc.nomor})" class="btn btn-light w-full mb-2">Selesai Gunakan</button>` : ''}
+      ${isAdmin ? `<button onclick="setPcStatus(${pc.nomor}, 'Kosong')" class="btn btn-light w-full mb-2">Set Kosong</button><button onclick="setPcStatus(${pc.nomor}, 'Maintenance')" class="btn btn-danger w-full mb-2">Set Maintenance</button><button onclick="shutdownSelected(${pc.nomor})" class="btn btn-danger w-full">Matikan Manual oleh Admin</button>` : ''}
+    </div>`;
+}
+
+async function setPcStatus(no, status) {
+  const res = await gs('setComputerStatus', token, monitoringRoom, no, status);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) {
+    selectedComputer = null;
+    refreshMonitoringData();
+  }
+}
+
+async function useComputer(no) {
+  const { value: form } = await Swal.fire({
+    title: 'Gunakan Komputer ' + pad2(no),
+    html: `
+      <select id="swPurpose" class="swal2-input"><option>Praktik</option><option>Materi</option><option>Penelitian</option></select>
+      <select id="swSubject" class="swal2-input"><option value="">Pilih Mata Kuliah</option>${subjects.map(s => `<option>${s.nama}</option>`).join('')}</select>
+      <input id="swDosen" class="swal2-input" placeholder="Dosen penanggung jawab">`,
+    preConfirm: () => ({ keperluan: document.getElementById('swPurpose').value, mataKuliah: document.getElementById('swSubject').value, dosen: document.getElementById('swDosen').value })
+  });
+  if (!form) return;
+  const res = await gs('assignComputer', token, { kodeRuangan: monitoringRoom, nomorKomputer: no, ...form });
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  selectedComputer = null;
+  refreshMonitoringData();
+}
+
+async function releaseSelected(no) {
+  const res = await gs('releaseComputer', token, monitoringRoom, no, 'Selesai digunakan');
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  selectedComputer = null;
+  refreshMonitoringData();
+}
+
+async function shutdownSelected(no) {
+  const ask = await Swal.fire({ title: 'Matikan komputer?', text: 'Admin akan mengosongkan dan mencatat komputer ini dimatikan manual.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Matikan' });
+  if (!ask.isConfirmed) return;
+  const res = await gs('shutdownComputer', token, monitoringRoom, no);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  selectedComputer = null;
+  refreshMonitoringData();
+}
+
+async function loadPresensi() {
+  const res = await gs('getPresensiList', token, 150);
+  document.getElementById('view-presensi').innerHTML = `
+    <div class="card p-5 mb-4">
+      <div class="flex justify-between gap-3 flex-wrap">
+        <div>
+          <h3 class="font-extrabold text-lg">Presensi QR Code</h3>
+          <p class="text-sm text-slate-500">Riwayat masuk/keluar penggunaan ruangan dan komputer laboratorium.</p>
+        </div>
+        <button onclick="openScanner()" class="btn btn-danger"><i class="fa-solid fa-qrcode mr-2"></i>Buka Scanner QR</button>
+      </div>
+      <div id="qrPreview" class="mt-4"></div>
+    </div>
+    ${table(['Tanggal','Jam Masuk','Jam Keluar','NIM/NIDN','Nama','Role','Ruangan','Komputer','Keperluan','Status'], (res.data || []).map(d => [d.tanggal,d.jamMasuk,d.jamKeluar,d.identifier,d.nama,d.role,d.kodeRuangan,pad2(d.nomorKomputer || ''),d.keperluan,d.status]))}`;
+}
+
+function openScanner() {
+  window.open(DEPLOYMENT_URL, '_blank');
+}
+
+function checkQrResult() {
+  const raw = localStorage.getItem('epremo_qr_result');
+  if (!raw) return;
+  try {
+    const item = JSON.parse(raw);
+    if (!item.ts || item.ts <= lastQrTs) return;
+    lastQrTs = item.ts;
+    localStorage.removeItem('epremo_qr_result');
+    if (!currentUser && loginMode === 'khusus') {
+      document.getElementById('specialQrText').value = item.value;
+      Swal.fire('QR Terbaca', 'QR pengguna khusus sudah masuk ke form login.', 'success');
+      return;
+    }
+    if (!currentUser || !token) return;
+    processQrValue(item.value, item.source || 'camera');
+  } catch (err) {
+    localStorage.removeItem('epremo_qr_result');
+  }
+}
+
+async function processQrValue(value, source) {
+  let payload = {};
+  try {
+    payload = JSON.parse(value);
+  } catch (err) {
+    payload = { nomorKomputer: value };
+  }
+
+  if (payload.type === 'E_PREMO_SPECIAL') {
+    if (!currentUser) {
+      switchLoginTab('khusus');
+      document.getElementById('specialQrText').value = value;
+      Swal.fire('QR Pengguna Khusus', 'Silakan tekan Masuk E-Pre&Mo untuk melanjutkan registrasi.', 'info');
+    }
+    return;
+  }
+
+  if (payload.type === 'E_PREMO_ROOM') {
+    if (currentUser.role !== 'dosen' && currentUser.role !== 'admin') {
+      Swal.fire('Akses Ditolak', 'QR ruangan digunakan untuk pemesanan/penggunaan ruangan oleh dosen.', 'warning');
+      return;
+    }
+    pendingRoomQr = value;
+    pendingRoomCode = payload.kodeRuangan;
+    showView('pemesanan');
+    return;
+  }
+
+  const nomor = Number(payload.nomorKomputer || payload.nomor || payload.pc || value);
+  const room = payload.kodeRuangan || payload.ruangan || monitoringRoom || rooms[0]?.kode;
+  if (!room || !nomor) {
+    Swal.fire('QR Tidak Valid', 'Kode QR harus memuat nomor komputer dan ruangan, atau minimal nomor komputer.', 'warning');
+    return;
+  }
+
+  let manualReason = '';
+  if (source === 'manual' && currentUser.role === 'mahasiswa') {
+    const reason = await Swal.fire({
+      title: 'Alasan Presensi Manual',
+      text: 'Manual hanya boleh digunakan jika kamera blur/rusak.',
+      input: 'select',
+      inputOptions: {
+        'Kamera blur': 'Kamera blur',
+        'Kamera rusak': 'Kamera rusak',
+        'Kamera tidak dapat membaca QR': 'Kamera tidak dapat membaca QR'
+      },
+      inputPlaceholder: 'Pilih alasan',
+      showCancelButton: true,
+      confirmButtonText: 'Lanjutkan'
+    });
+    if (!reason.isConfirmed || !reason.value) return;
+    manualReason = reason.value;
+  }
+
+  let mataKuliah = payload.mataKuliah || '';
+  let dosen = payload.dosen || '';
+  if (currentUser.role === 'mahasiswa') {
+    const dosenOptions = [...new Set(subjects.map(s => s.dosen).filter(Boolean))];
+    const form = await Swal.fire({
+      title: 'Presensi Komputer ' + pad2(nomor),
+      html: `
+        <p class="text-sm">Ruangan: <b>${room}</b></p>
+        <select id="qrSubject" class="swal2-input"><option value="">Pilih Mata Kuliah</option>${subjects.map(s => `<option>${s.nama}</option>`).join('')}</select>
+        <select id="qrDosen" class="swal2-input"><option value="">Pilih Dosen</option>${dosenOptions.map(d => `<option>${d}</option>`).join('')}</select>`,
+      showCancelButton: true,
+      confirmButtonText: 'Submit Presensi',
+      preConfirm: () => {
+        const mk = document.getElementById('qrSubject').value;
+        const ds = document.getElementById('qrDosen').value;
+        if (!mk || !ds) {
+          Swal.showValidationMessage('Pilih dosen dan mata kuliah terlebih dahulu.');
+          return false;
+        }
+        return { mataKuliah: mk, dosen: ds };
+      }
+    });
+    if (!form.isConfirmed) return;
+    mataKuliah = form.value.mataKuliah;
+    dosen = form.value.dosen;
+  } else {
+    const confirm = await Swal.fire({
+      title: 'Gunakan Komputer ' + pad2(nomor) + '?',
+      text: 'Ruangan: ' + room,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Gunakan'
+    });
+    if (!confirm.isConfirmed) return;
+  }
+
+  const res = await gs('assignComputer', token, {
+    kodeRuangan: room,
+    nomorKomputer: nomor,
+    qrText: source === 'manual' ? '' : value,
+    qrSource: source,
+    manualReason,
+    keperluan: payload.keperluan || 'Praktik',
+    mataKuliah,
+    dosen
+  });
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (currentView === 'monitoring') refreshMonitoringData();
+}
+
+async function loadPemesanan() {
+  if (currentUser.role === 'pengguna_khusus') return loadRegistrasiKhusus();
+  const res = await gs('getBookingList', token);
+  document.getElementById('view-pemesanan').innerHTML = `
+    <div class="grid lg:grid-cols-[360px_1fr] gap-5">
+      <form onsubmit="submitRoomUsage(event)" class="card p-5 space-y-3">
+        <h3 class="font-extrabold text-lg">Pemesanan Ruangan Dosen</h3>
+        <p class="text-sm text-slate-500">Scan QR Code yang ditempel pada pintu laboratorium, lalu pilih keperluan dan mata kuliah.</p>
+        <button type="button" onclick="openScanner()" class="btn btn-primary w-full">Scan QR Pintu Lab</button>
+        <input id="roomQrStatus" class="field" readonly value="${pendingRoomCode ? 'QR terbaca: ' + pendingRoomCode : 'Belum scan QR ruangan'}">
+        <select id="roomPurpose" class="field"><option>Praktik</option><option>Materi</option><option>Penelitian</option></select>
+        <select id="roomSubject" class="field"><option value="">Pilih Mata Kuliah</option>${subjects.map(s => `<option>${s.nama}</option>`).join('')}</select>
+        <input id="roomDosen" class="field" value="${currentUser.nama || ''}" placeholder="Dosen penanggung jawab">
+        <button class="btn btn-danger w-full">Submit Penggunaan Ruangan</button>
+      </form>
+      <div>${table(['Tanggal','Jam','Ruangan','Komputer','Pemesan','Keperluan','Status'], (res.data || []).map(d => [d.tanggal, d.jamMulai + ' - ' + d.jamSelesai, d.kodeRuangan, d.nomorKomputer || '-', d.nama, d.keperluan, d.status]))}</div>
+    </div>`;
+}
+
+async function submitRoomUsage(e) {
+  e.preventDefault();
+  if (!pendingRoomQr) {
+    Swal.fire('QR Belum Ada', 'Scan QR pintu lab terlebih dahulu.', 'warning');
+    return;
+  }
+  const res = await gs('startRoomUsage', token, {
+    qrText: pendingRoomQr,
+    kodeRuangan: pendingRoomCode,
+    keperluan: val('roomPurpose'),
+    mataKuliah: val('roomSubject'),
+    dosen: val('roomDosen')
+  });
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) {
+    pendingRoomQr = '';
+    pendingRoomCode = '';
+    loadPemesanan();
+  }
+}
+
+async function loadRegistrasiKhusus() {
+  document.getElementById('view-pemesanan').innerHTML = `
+    <form onsubmit="submitSpecialRegistration(event)" class="card p-5 space-y-3 max-w-2xl">
+      <h3 class="font-extrabold text-lg">Registrasi Penggunaan Ruangan/Komputer</h3>
+      <p class="text-sm text-slate-500">Isi data diri dan keperluan penggunaan. Admin akan menentukan apakah penggunaan diperbolehkan.</p>
+      <input id="spNama" class="field" placeholder="Nama lengkap" required>
+      <input id="spIdentitas" class="field" placeholder="Identitas" required>
+      <input id="spInstansi" class="field" placeholder="Instansi">
+      <input id="spNoHp" class="field" placeholder="No HP">
+      <input id="spEmail" class="field" placeholder="Email">
+      <textarea id="spKeperluan" class="field" placeholder="Keperluan penggunaan" required></textarea>
+      <select id="spRoom" class="field" onchange="renderSpecialComputerOptions()">${rooms.map(r => `<option value="${r.kode}">${r.nama}</option>`).join('')}</select>
+      <select id="spComputer" class="field"><option value="">Tidak menggunakan komputer</option></select>
+      <button class="btn btn-danger w-full">Kirim Registrasi</button>
+    </form>`;
+  renderSpecialComputerOptions();
+}
+
+function renderSpecialComputerOptions() {
+  const room = val('spRoom');
+  const select = document.getElementById('spComputer');
+  if (!select) return;
+  select.innerHTML = '<option value="">Tidak menggunakan komputer</option>' + Array.from({length: 30}, (_, i) => `<option value="${i+1}">Komputer ${pad2(i+1)}</option>`).join('');
+}
+
+async function submitSpecialRegistration(e) {
+  e.preventDefault();
+  const res = await gs('registerSpecialUser', token, {
+    nama: val('spNama'),
+    identitas: val('spIdentitas'),
+    instansi: val('spInstansi'),
+    noHp: val('spNoHp'),
+    email: val('spEmail'),
+    keperluan: val('spKeperluan'),
+    kodeRuangan: val('spRoom'),
+    nomorKomputer: val('spComputer')
+  });
+  Swal.fire(res.success ? 'Terkirim' : 'Gagal', res.message, res.success ? 'success' : 'error');
+}
+
+async function loadQrKomputer() {
+  if (currentUser.role !== 'admin') {
+    document.getElementById('view-qr-komputer').innerHTML = `<div class="card p-6 text-epRed font-bold">Menu QR komputer hanya untuk admin.</div>`;
+    return;
+  }
+  document.getElementById('view-qr-komputer').innerHTML = `
+    <div class="card p-5 mb-4">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+          <h3 class="font-extrabold text-lg">QR Komputer Permanen</h3>
+          <p class="text-sm text-slate-500">QR dibuat oleh admin, dicetak, lalu ditempel pada meja komputer sesuai nomor komputer.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <select id="qrRoomSelect" class="field">${rooms.map(r => `<option value="${r.kode}">${r.nama}</option>`).join('')}</select>
+          <button onclick="renderComputerQr()" class="btn btn-primary">Tampilkan QR</button>
+          <button onclick="window.print()" class="btn btn-danger">Cetak</button>
+        </div>
+      </div>
+    </div>
+    <div id="qrComputerGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>`;
+  renderComputerQr();
+}
+
+async function loadPembuatanQr() {
+  if (currentUser.role !== 'admin') {
+    document.getElementById('view-pembuatan-qr').innerHTML = `<div class="card p-6 text-epRed font-bold">Menu pembuatan QR hanya untuk admin.</div>`;
+    return;
+  }
+  document.getElementById('view-pembuatan-qr').innerHTML = `
+    <div class="card p-5 mb-4">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+        <div>
+          <h3 class="font-extrabold text-lg">Pembuatan QR Code</h3>
+          <p class="text-sm text-slate-500">Buat QR paten untuk pintu ruangan, meja komputer, dan login pengguna khusus.</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-danger">Cetak Halaman QR</button>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-2 mt-4">
+        <button onclick="renderQrKomputerAdmin()" class="btn btn-primary">QR Komputer</button>
+        <button onclick="renderQrRuanganAdmin()" class="btn btn-primary">QR Ruangan</button>
+        <button onclick="renderQrKhususAdmin()" class="btn btn-primary">QR Pengguna Khusus</button>
+      </div>
+    </div>
+    <div id="qrAdminArea"></div>`;
+  renderQrKomputerAdmin();
+}
+
+async function renderQrKomputerAdmin() {
+  const area = document.getElementById('qrAdminArea');
+  area.innerHTML = `
+    <div class="card p-4 mb-4 flex flex-col sm:flex-row gap-2">
+      <select id="adminQrRoom" class="field">${rooms.map(r => `<option value="${r.kode}">${r.nama}</option>`).join('')}</select>
+      <button onclick="makeComputerQrs()" class="btn btn-primary">Tampilkan</button>
+    </div>
+    <div id="adminQrGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>`;
+  makeComputerQrs();
+}
+
+async function makeComputerQrs() {
+  const room = val('adminQrRoom') || rooms[0]?.kode || '';
+  const res = await gs('getComputerQrList', token, room);
+  renderQrCards('adminQrGrid', res);
+}
+
+async function renderQrRuanganAdmin() {
+  const area = document.getElementById('qrAdminArea');
+  area.innerHTML = `<div id="adminQrGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>`;
+  const res = await gs('getRoomQrList', token);
+  renderQrCards('adminQrGrid', res);
+}
+
+async function renderQrKhususAdmin() {
+  const area = document.getElementById('qrAdminArea');
+  area.innerHTML = `
+    <div class="card p-4 mb-4 flex flex-col sm:flex-row gap-2">
+      <input id="specialQrCount" type="number" min="1" value="1" class="field" placeholder="Jumlah QR">
+      <button onclick="makeSpecialQrs()" class="btn btn-primary">Buat QR Khusus</button>
+    </div>
+    <div id="adminQrGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>`;
+}
+
+async function makeSpecialQrs() {
+  const count = Number(document.getElementById('specialQrCount')?.value || 1);
+  const res = await gs('getSpecialQrList', token, count);
+  renderQrCards('adminQrGrid', res);
+}
+
+function renderQrCards(targetId, res) {
+  const box = document.getElementById(targetId);
+  if (!res.success) {
+    box.innerHTML = `<div class="card p-6 text-epRed font-bold">${res.message}</div>`;
+    return;
+  }
+  box.innerHTML = (res.data || []).map((item, i) => `
+    <div class="card p-4 text-center break-inside-avoid">
+      <h4 class="font-extrabold text-epBlue">${item.label || item.qrId || item.kodeRuangan}</h4>
+      <div id="${targetId}-card-${i}" class="flex justify-center my-3"></div>
+      <p class="text-xs text-slate-500">E-Pre&Mo - Pendidikan Informatika</p>
+    </div>`).join('');
+  (res.data || []).forEach((item, i) => {
+    new QRCode(document.getElementById(targetId + '-card-' + i), {
+      text: item.payload,
+      width: 180,
+      height: 180,
+      colorDark: '#0B3A75',
+      colorLight: '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+}
+
+async function renderComputerQr() {
+  const room = val('qrRoomSelect') || rooms[0]?.kode || '';
+  const box = document.getElementById('qrComputerGrid');
+  box.innerHTML = `<div class="card p-6 text-slate-500 font-bold">Membuat QR komputer...</div>`;
+  const res = await gs('getComputerQrList', token, room);
+  if (!res.success) {
+    box.innerHTML = `<div class="card p-6 text-epRed font-bold">${res.message}</div>`;
+    return;
+  }
+  box.innerHTML = (res.data || []).map((item, i) => `
+    <div class="card p-4 text-center break-inside-avoid">
+      <h4 class="font-extrabold text-epBlue">${item.kodeRuangan}</h4>
+      <p class="text-3xl font-extrabold text-slate-900">Komputer ${pad2(item.nomorKomputer)}</p>
+      <div id="qr-card-${i}" class="flex justify-center my-3"></div>
+      <p class="text-xs text-slate-500">E-Pre&Mo - Pendidikan Informatika</p>
+    </div>`).join('');
+  (res.data || []).forEach((item, i) => {
+    new QRCode(document.getElementById('qr-card-' + i), {
+      text: item.payload,
+      width: 180,
+      height: 180,
+      colorDark: '#0B3A75',
+      colorLight: '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+}
+
+async function loadLaporan() {
+  const today = new Date().toISOString().slice(0,10);
+  const monthStart = today.slice(0, 8) + '01';
+  const archive = await gs('getArchiveList', token);
+  const folder = await gs('getArchiveFolderUrl', token);
+  document.getElementById('view-laporan').innerHTML = `
+    <div class="grid xl:grid-cols-[380px_1fr] gap-4 md:gap-5">
+      <div class="space-y-5">
+        <form onsubmit="previewReport(event)" class="card p-4 md:p-5 space-y-3">
+          <h3 class="font-extrabold text-lg">Laporan Data</h3>
+          <p class="text-sm text-slate-500">Buat arsip data penggunaan, pemesanan, atau data pengguna ke folder Google Drive.</p>
+          ${folder.success ? `<a href="${folder.url}" target="_blank" class="btn btn-primary block text-center">Buka Folder Drive Arsip</a>` : `<p class="text-xs text-epRed">${folder.message || ''}</p>`}
+          <select id="reportType" class="field" onchange="toggleReportFilters()">
+            <option value="penggunaan">Penggunaan Laboratorium Komputer</option>
+            <option value="pemesanan">Pemesanan Ruangan dan Komputer</option>
+            ${currentUser.role === 'admin' ? '<option value="pengguna">Data Pengguna</option>' : ''}
+          </select>
+          <div class="grid grid-cols-2 gap-2" id="reportDateFields">
+            <input id="reportStart" type="date" class="field" value="${monthStart}">
+            <input id="reportEnd" type="date" class="field" value="${today}">
+          </div>
+          <select id="reportRoom" class="field">
+            <option value="">Semua Ruangan</option>
+            ${rooms.map(r => `<option value="${r.kode}">${r.nama}</option>`).join('')}
+          </select>
+          <select id="reportRole" class="field">
+            <option value="">Semua Role</option>
+            <option value="mahasiswa">Mahasiswa</option>
+            <option value="dosen">Dosen</option>
+          </select>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-eye mr-2"></i>Tampilkan</button>
+            <button class="btn btn-danger" type="button" onclick="archiveCurrentReport()"><i class="fa-solid fa-folder-plus mr-2"></i>Arsipkan</button>
+          </div>
+        </form>
+        <div class="card p-5">
+          <h3 class="font-extrabold text-lg mb-3">Arsip Tersimpan</h3>
+          <div class="space-y-2 max-h-[420px] overflow-auto">
+            ${(archive.data || []).length ? archive.data.map(a => `
+              <a href="${a.url}" target="_blank" class="block border border-slate-200 rounded-lg p-3 hover:border-epBlue">
+                <p class="font-extrabold text-sm text-epBlue">${a.jenis}</p>
+                <p class="text-xs text-slate-500">${a.tanggal} | ${a.jumlah} data</p>
+                <p class="text-xs text-slate-400 truncate">${a.file}</p>
+              </a>`).join('') : '<p class="text-sm text-slate-400">Belum ada arsip laporan.</p>'}
+          </div>
+        </div>
+      </div>
+      <div>
+        <div id="reportSummary" class="card p-5 mb-4">
+          <h3 class="font-extrabold text-lg">Pratinjau Laporan</h3>
+          <p class="text-sm text-slate-500">Pilih filter lalu tampilkan data sebelum diarsipkan.</p>
+        </div>
+        <div id="reportTable">${table(['Info'], [['Belum ada pratinjau laporan']])}</div>
+      </div>
+    </div>`;
+  toggleReportFilters();
+}
+
+function toggleReportFilters() {
+  const type = val('reportType');
+  const isUserReport = type === 'pengguna';
+  document.getElementById('reportDateFields').classList.toggle('hidden', isUserReport);
+  document.getElementById('reportRoom').classList.toggle('hidden', isUserReport);
+}
+
+function reportFilters() {
+  const type = val('reportType');
+  return {
+    jenis: type,
+    mulai: type === 'pengguna' ? '' : val('reportStart'),
+    selesai: type === 'pengguna' ? '' : val('reportEnd'),
+    kodeRuangan: type === 'pengguna' ? '' : val('reportRoom'),
+    role: val('reportRole')
+  };
+}
+
+async function previewReport(e) {
+  if (e) e.preventDefault();
+  showLoading();
+  const res = await gs('getReportData', token, reportFilters());
+  showLoading(false);
+  if (!res.success) return Swal.fire('Gagal', res.message, 'error');
+  document.getElementById('reportSummary').innerHTML = `
+    <h3 class="font-extrabold text-lg">Pratinjau Laporan</h3>
+    <p class="text-sm text-slate-500">${res.total} data ditemukan. Data ini bisa disimpan sebagai arsip ke folder Google Drive.</p>`;
+  document.getElementById('reportTable').innerHTML = table(res.headers, res.data);
+}
+
+async function archiveCurrentReport() {
+  const ask = await Swal.fire({
+    title: 'Arsipkan laporan?',
+    text: 'Sistem akan membuat file CSV dan menyimpannya ke folder Google Drive arsip.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Arsipkan'
+  });
+  if (!ask.isConfirmed) return;
+  showLoading();
+  const res = await gs('archiveReportToDrive', token, reportFilters());
+  showLoading(false);
+  if (!res.success) return Swal.fire('Gagal', res.message, 'error');
+  Swal.fire({
+    title: 'Berhasil',
+    html: `${res.message}<br><a href="${res.url}" target="_blank" class="text-blue-700 underline">${res.filename}</a>`,
+    icon: 'success'
+  });
+  loadLaporan();
+}
+
+async function loadProfil() {
+  const res = await gs('getProfile', token);
+  const data = res.data || {};
+  const fieldsByRole = {
+    mahasiswa: ['Nama','NIM','Semester','Program Studi','No HP','Email'],
+    dosen: ['Nama','NIDN','No HP','Email','Keahlian'],
+    pengguna_khusus: ['Nama','Identitas','Instansi','No HP','Email','Keperluan','Kode Ruangan','Nomor Komputer']
+  };
+  const fields = fieldsByRole[currentUser.role] || Object.keys(data);
+  document.getElementById('view-profil').innerHTML = `
+    <form onsubmit="saveProfileFront(event)" class="card p-5 max-w-3xl space-y-3">
+      <h3 class="font-extrabold text-lg mb-4">Profil ${currentUser.role === 'mahasiswa' ? 'Mahasiswa' : currentUser.role === 'dosen' ? 'Dosen' : 'Pengguna'}</h3>
+      ${fields.map(f => {
+        const readonly = ['NIM','NIDN'].includes(f) ? 'readonly' : '';
+        const label = f === 'Keahlian' ? 'Mata Kuliah' : f;
+        return `<label class="block text-xs font-bold uppercase text-slate-500">${label}</label><input data-profile-field="${f}" class="field" ${readonly} value="${data[f] || ''}">`;
+      }).join('')}
+      <button class="btn btn-danger w-full">Simpan Profil</button>
+    </form>`;
+}
+
+async function saveProfileFront(e) {
+  e.preventDefault();
+  const data = {};
+  document.querySelectorAll('[data-profile-field]').forEach(input => data[input.dataset.profileField] = input.value);
+  const res = await gs('updateProfile', token, data);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+}
+
+async function loadMahasiswa() {
+  const res = await gs('getMahasiswaList', token);
+  const list = res.data || [];
+  const semesters = [...new Set(list.map(d => d.semester).filter(Boolean))].sort((a,b) => Number(a) - Number(b));
+  const selectedSemester = localStorage.getItem('epremo_filter_semester') || '';
+  const filtered = selectedSemester ? list.filter(d => String(d.semester) === String(selectedSemester)) : list;
+  document.getElementById('view-mahasiswa').innerHTML = `
+    <form onsubmit="saveMahasiswaFront(event)" class="card p-5 mb-4 grid md:grid-cols-3 gap-3">
+      <h3 class="font-extrabold text-lg md:col-span-3">Data Mahasiswa</h3>
+      <input id="mNama" class="field" placeholder="NAMA" required>
+      <input id="mNim" class="field" placeholder="NIM" required>
+      <input id="mSemester" class="field" placeholder="SEMESTER">
+      <input id="mProgramStudi" class="field" placeholder="PROGRAM STUDI" value="Pendidikan Informatika">
+      <input id="mNoHp" class="field" placeholder="NO HP">
+      <input id="mEmail" class="field" placeholder="EMAIL">
+      <button class="btn btn-danger md:col-span-3">Simpan Mahasiswa</button>
+    </form>
+    <div class="card p-4 mb-4 flex flex-col sm:flex-row gap-2 sm:items-center">
+      <span class="font-bold text-sm">Filter Semester</span>
+      <select id="filterSemester" class="field sm:max-w-xs" onchange="setSemesterFilter(this.value)">
+        <option value="">Semua Semester</option>
+        ${semesters.map(s => `<option value="${s}" ${String(s) === String(selectedSemester) ? 'selected' : ''}>Semester ${s}</option>`).join('')}
+      </select>
+    </div>
+    ${table(['Nama','NIM','Semester','Program Studi','No HP','Email','Status','Aksi'], filtered.map(d => [d.nama,d.nim,d.semester,d.programStudi,d.noHp,d.email,d.status, `<button class="btn btn-light" onclick='editMahasiswa(${JSON.stringify(d)})'>Edit</button> <button class="btn btn-danger" onclick="deleteMahasiswaFront('${d.nim}')">Hapus</button>`]))}`;
+}
+
+async function loadDosen() {
+  const res = await gs('getDosenList', token);
+  document.getElementById('view-dosen').innerHTML = `
+    <form onsubmit="saveDosenFront(event)" class="card p-5 mb-4 grid md:grid-cols-3 gap-3">
+      <h3 class="font-extrabold text-lg md:col-span-3">Data Dosen</h3>
+      <input id="dNama" class="field" placeholder="Nama" required>
+      <input id="dNidn" class="field" placeholder="NIDN" required>
+      <input id="dUsername" class="field" placeholder="Username login" required>
+      <input id="dPassword" class="field" placeholder="Password awal">
+      <input id="dNoHp" class="field" placeholder="No HP">
+      <input id="dEmail" class="field" placeholder="Email">
+      <input id="dKeahlian" class="field md:col-span-2" placeholder="Mata Kuliah">
+      <button class="btn btn-danger">Simpan Dosen</button>
+    </form>
+    ${table(['Nama','NIDN','Username','No HP','Email','Mata Kuliah','Status','Aksi'], (res.data || []).map(d => [d.nama,d.nidn,d.username,d.noHp,d.email,d.keahlian,d.status, `<button class="btn btn-light" onclick='editDosen(${JSON.stringify(d)})'>Edit</button> <button class="btn btn-danger" onclick="deleteDosenFront('${d.nidn}')">Hapus</button>`]))}`;
+}
+
+function editMahasiswa(d) {
+  document.getElementById('mNama').value = d.nama || '';
+  document.getElementById('mNim').value = d.nim || '';
+  document.getElementById('mSemester').value = d.semester || '';
+  document.getElementById('mProgramStudi').value = d.programStudi || 'Pendidikan Informatika';
+  document.getElementById('mNoHp').value = d.noHp || '';
+  document.getElementById('mEmail').value = d.email || '';
+}
+
+async function saveMahasiswaFront(e) {
+  e.preventDefault();
+  const res = await gs('saveMahasiswa', token, {
+    nama: val('mNama'), nim: val('mNim'), jenisKelamin: '', semester: val('mSemester'),
+    programStudi: val('mProgramStudi') || 'Pendidikan Informatika', noHp: val('mNoHp'), email: val('mEmail'), alamat: '', status: 'Aktif'
+  });
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) loadMahasiswa();
+}
+
+function setSemesterFilter(value) {
+  localStorage.setItem('epremo_filter_semester', value);
+  loadMahasiswa();
+}
+
+async function deleteMahasiswaFront(nim) {
+  const ask = await Swal.fire({ title: 'Hapus mahasiswa?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Hapus' });
+  if (!ask.isConfirmed) return;
+  const res = await gs('deleteMahasiswa', token, nim);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) loadMahasiswa();
+}
+
+function editDosen(d) {
+  document.getElementById('dNama').value = d.nama || '';
+  document.getElementById('dNidn').value = d.nidn || '';
+  document.getElementById('dUsername').value = d.username || '';
+  document.getElementById('dNoHp').value = d.noHp || '';
+  document.getElementById('dEmail').value = d.email || '';
+  document.getElementById('dKeahlian').value = d.keahlian || '';
+}
+
+async function saveDosenFront(e) {
+  e.preventDefault();
+  const res = await gs('saveDosen', token, {
+    nama: val('dNama'), nidn: val('dNidn'), username: val('dUsername'), password: val('dPassword'),
+    noHp: val('dNoHp'), email: val('dEmail'), keahlian: val('dKeahlian'), status: 'Aktif'
+  });
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) loadDosen();
+}
+
+async function deleteDosenFront(nidn) {
+  const ask = await Swal.fire({ title: 'Hapus dosen?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Hapus' });
+  if (!ask.isConfirmed) return;
+  const res = await gs('deleteDosen', token, nidn);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) loadDosen();
+}
+
+async function loadPenggunaKhususAdmin() {
+  const res = await gs('getSpecialUserList', token);
+  document.getElementById('view-pengguna-khusus').innerHTML = `
+    <div class="card p-5 mb-4">
+      <h3 class="font-extrabold text-lg">Pengguna Khusus</h3>
+      <p class="text-sm text-slate-500">Admin memeriksa registrasi dan menentukan apakah pengguna khusus diperbolehkan menggunakan ruangan/komputer.</p>
+    </div>
+    ${table(['Nama','Identitas','Instansi','Ruangan','Komputer','Keperluan','Status','Aksi'], (res.data || []).map(d => [
+      d.nama,d.identitas,d.instansi,d.kodeRuangan,d.nomorKomputer || '-',d.keperluan,d.status,
+      `<button class="btn btn-primary" onclick="approveSpecial('${d.id}')">Izinkan</button> <button class="btn btn-danger" onclick="rejectSpecial('${d.id}')">Tolak</button>`
+    ]))}`;
+}
+
+async function approveSpecial(id) {
+  const res = await gs('updateSpecialUserStatus', token, id, 'Disetujui', 'Diizinkan menggunakan ruangan/komputer');
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) loadPenggunaKhususAdmin();
+}
+
+async function rejectSpecial(id) {
+  const reason = await Swal.fire({ title: 'Alasan penolakan', input: 'text', showCancelButton: true, confirmButtonText: 'Tolak' });
+  if (!reason.isConfirmed) return;
+  const res = await gs('updateSpecialUserStatus', token, id, 'Ditolak', reason.value || '');
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) loadPenggunaKhususAdmin();
+}
+
+async function loadRuangan() {
+  document.getElementById('view-ruangan').innerHTML = `
+    <div class="grid lg:grid-cols-[360px_1fr] gap-5">
+      <form onsubmit="saveRuanganFront(event)" class="card p-4 md:p-5 space-y-3">
+        <h3 class="font-extrabold text-lg">Ruangan & Komputer</h3>
+        <input id="rKode" class="field" placeholder="Kode Ruangan, contoh LAB-1" required>
+        <input id="rNama" class="field" placeholder="Nama Ruangan" required>
+        <input id="rLokasi" class="field" placeholder="Lokasi">
+        <input id="rKapasitas" type="number" min="1" class="field" placeholder="Kapasitas Komputer" required>
+        <select id="rStatus" class="field"><option>Aktif</option><option>Nonaktif</option><option>Maintenance</option></select>
+        <textarea id="rKet" class="field" placeholder="Keterangan"></textarea>
+        <button class="btn btn-danger w-full">Simpan Ruangan</button>
+      </form>
+      <div>${table(['Kode','Nama Ruangan','Lokasi','Kapasitas','Status','Keterangan','Aksi'], rooms.map(r => [r.kode,r.nama,r.lokasi,r.kapasitas,r.status,r.keterangan, `<button class="btn btn-light" onclick='editRuangan(${JSON.stringify(r)})'>Edit</button> <button class="btn btn-danger" onclick="deleteRuanganFront('${r.kode}')">Hapus</button>`]))}</div>
+    </div>`;
+}
+
+async function saveRuanganFront(e) {
+  e.preventDefault();
+  const res = await gs('saveRuangan', token, { kode: val('rKode'), nama: val('rNama'), lokasi: val('rLokasi'), kapasitas: val('rKapasitas'), status: val('rStatus'), keterangan: val('rKet') });
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) {
+    await preloadData();
+    loadRuangan();
+  }
+}
+
+function editRuangan(r) {
+  document.getElementById('rKode').value = r.kode || '';
+  document.getElementById('rNama').value = r.nama || '';
+  document.getElementById('rLokasi').value = r.lokasi || '';
+  document.getElementById('rKapasitas').value = r.kapasitas || '';
+  document.getElementById('rStatus').value = r.status || 'Aktif';
+  document.getElementById('rKet').value = r.keterangan || '';
+}
+
+async function deleteRuanganFront(kode) {
+  const ask = await Swal.fire({ title: 'Hapus ruangan?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Hapus' });
+  if (!ask.isConfirmed) return;
+  const res = await gs('deleteRuangan', token, kode);
+  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
+  if (res.success) {
+    await preloadData();
+    loadRuangan();
+  }
+}
+
+function statCard(label, value, icon, color) {
+  return `<div class="card p-4 md:p-5"><div class="flex justify-between items-center gap-2"><div class="min-w-0"><p class="text-[10px] md:text-xs font-bold uppercase text-slate-400 truncate">${label}</p><h3 class="text-2xl md:text-3xl font-extrabold mt-1">${value}</h3></div><i class="fa-solid ${icon} ${color} text-xl md:text-2xl shrink-0"></i></div></div>`;
+}
+
+function miniInfo(label, value, icon) {
+  return `<div class="card p-4 flex items-center gap-3"><i class="fa-solid ${icon} text-epBlue text-xl"></i><div><p class="text-[10px] uppercase font-bold text-slate-400">${label}</p><p class="font-extrabold text-sm">${value || '-'}</p></div></div>`;
+}
+
+function infoRow(k, v) {
+  return `<div class="flex justify-between gap-3 border-b border-slate-100 pb-2"><span class="font-bold text-epBlue">${k}</span><span class="text-right">${v || '-'}</span></div>`;
+}
+
+function table(headers, rows) {
+  return `<div class="card overflow-auto table-scroll"><table class="w-full min-w-[720px] text-sm"><thead class="bg-epBlue text-white"><tr>${headers.map(h => `<th class="px-3 md:px-4 py-3 text-left text-xs uppercase whitespace-nowrap">${h}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(r => `<tr class="border-b hover:bg-slate-50">${r.map(c => `<td class="px-3 md:px-4 py-3 whitespace-nowrap">${c || '-'}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}" class="text-center py-8 text-slate-400">Belum ada data.</td></tr>`}</tbody></table></div>`;
+}
+
+function skeleton(title) { return `<div class="card p-8 text-center text-slate-500 font-bold">${title} sedang dimuat...</div>`; }
+function errorBox(el, msg) { el.innerHTML = `<div class="card p-6 text-epRed font-bold">${msg}</div>`; }
+function val(id) { return document.getElementById(id).value; }
+function pad2(n) { return String(n || '').padStart(2, '0'); }
+
+function logout() {
+  if (token) gs('logout', token).catch(() => {});
+  localStorage.removeItem('epremo_token');
+  localStorage.removeItem('epremo_user');
+  location.reload();
+}
+
+async function loadAppLogo() {
+  try {
+    const res = await gs('getLogoDataUrl');
+    if (!res.success || !res.dataUrl) return;
+    document.querySelectorAll('[data-logo]').forEach(img => {
+      img.src = res.dataUrl;
+      img.classList.remove('hidden');
+    });
+    document.querySelectorAll('[data-logo-fallback]').forEach(el => el.classList.add('hidden'));
+  } catch (err) {
+    console.warn('Logo tidak dimuat', err);
+  }
+}
+
+setInterval(() => document.getElementById('clock').textContent = new Date().toLocaleTimeString('id-ID'), 1000);
+setInterval(checkQrResult, 1200);
+loadAppLogo();
+
+const savedUser = localStorage.getItem('epremo_user');
+if (token && savedUser) {
+  currentUser = JSON.parse(savedUser);
+  bootApp();
+}
+</script>
+</body>
+</html>
