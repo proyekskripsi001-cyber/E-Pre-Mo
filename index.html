@@ -69,6 +69,15 @@
       .app-header .btn { width: 44px; min-width: 44px; padding-left: 0; padding-right: 0; }
       .field { font-size: 14px; min-height: 42px; }
       table .btn { margin: 2px 0; padding: 8px 10px; min-height: 36px; }
+      .desktop-table { display: none !important; }
+      .mobile-cards { display: grid !important; gap: 10px; }
+      .mobile-stack { grid-template-columns: 1fr !important; }
+      .mobile-card-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #eef2f7; font-size: 12px; }
+      .mobile-card-row.block { display: block; }
+      .mobile-card-row.block span:first-child { display: block; margin-bottom: 8px; }
+      .mobile-card-row.block span:last-child { display: flex; flex-direction: column; gap: 8px; text-align: stretch; }
+      .mobile-card-row span:first-child { color: #0B3A75; font-weight: 800; flex: 0 0 42%; text-align: left; }
+      .mobile-card-row span:last-child { color: #172033; text-align: right; min-width: 0; overflow-wrap: anywhere; }
       .swal2-popup { width: min(94vw, 420px) !important; }
       .swal2-input, .swal2-select { width: 84% !important; max-width: 320px !important; }
       .xl\:grid-cols-\[380px_1fr\] { grid-template-columns: 1fr !important; }
@@ -82,6 +91,10 @@
       .desk { width: 68px; }
       .monitor { width: 50px; height: 34px; font-size: 14px; }
       .table-scroll table { min-width: 620px !important; }
+    }
+    @media (min-width: 769px) {
+      .mobile-cards { display: none !important; }
+      .desktop-table { display: block !important; }
     }
     @media (max-width: 380px) {
       .lab-grid { grid-template-columns: repeat(2, minmax(78px, 1fr)); gap: 14px 8px; }
@@ -1021,7 +1034,7 @@ async function loadLaporan() {
             <option value="pemesanan">Pemesanan Ruangan dan Komputer</option>
             ${currentUser.role === 'admin' ? '<option value="pengguna">Data Pengguna</option>' : ''}
           </select>
-          <div class="grid grid-cols-2 gap-2" id="reportDateFields">
+          <div class="grid grid-cols-2 gap-2 mobile-stack" id="reportDateFields">
             <input id="reportStart" type="date" class="field" value="${monthStart}">
             <input id="reportEnd" type="date" class="field" value="${today}">
           </div>
@@ -1034,12 +1047,12 @@ async function loadLaporan() {
             <option value="mahasiswa">Mahasiswa</option>
             <option value="dosen">Dosen</option>
           </select>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2 mobile-stack">
             <button class="btn btn-primary" type="submit"><i class="fa-solid fa-eye mr-2"></i>Tampilkan</button>
             <button class="btn btn-danger" type="button" onclick="archiveCurrentReport()"><i class="fa-solid fa-folder-plus mr-2"></i>Arsipkan</button>
           </div>
         </form>
-        <div class="card p-5">
+        <div class="card p-4 md:p-5">
           <h3 class="font-extrabold text-lg mb-3">Arsip Tersimpan</h3>
           <div class="space-y-2 max-h-[420px] overflow-auto">
             ${(archive.data || []).length ? archive.data.map(a => `
@@ -1052,11 +1065,14 @@ async function loadLaporan() {
         </div>
       </div>
       <div>
-        <div id="reportSummary" class="card p-5 mb-4">
+        <div id="reportSummary" class="card p-4 md:p-5 mb-4">
           <h3 class="font-extrabold text-lg">Pratinjau Laporan</h3>
           <p class="text-sm text-slate-500">Pilih filter lalu tampilkan data sebelum diarsipkan.</p>
         </div>
-        <div id="reportTable">${table(['Info'], [['Belum ada pratinjau laporan']])}</div>
+        <div id="reportTable">
+          <div class="desktop-table">${table(['Info'], [['Belum ada pratinjau laporan']])}</div>
+          <div class="mobile-cards"><div class="card p-4 text-sm text-slate-500">Belum ada pratinjau laporan.</div></div>
+        </div>
       </div>
     </div>`;
   toggleReportFilters();
@@ -1089,7 +1105,7 @@ async function previewReport(e) {
   document.getElementById('reportSummary').innerHTML = `
     <h3 class="font-extrabold text-lg">Pratinjau Laporan</h3>
     <p class="text-sm text-slate-500">${res.total} data ditemukan. Data ini bisa disimpan sebagai arsip ke folder Google Drive.</p>`;
-  document.getElementById('reportTable').innerHTML = table(res.headers, res.data);
+  document.getElementById('reportTable').innerHTML = responsiveDataView(res.headers, res.data);
 }
 
 async function archiveCurrentReport() {
@@ -1273,8 +1289,10 @@ async function rejectSpecial(id) {
 }
 
 async function loadRuangan() {
+  const headers = ['Kode','Nama Ruangan','Lokasi','Kapasitas','Status','Keterangan','Aksi'];
+  const rows = rooms.map(r => [r.kode,r.nama,r.lokasi,r.kapasitas,r.status,r.keterangan, `<button class="btn btn-light" onclick='editRuangan(${JSON.stringify(r)})'>Edit</button> <button class="btn btn-danger" onclick="deleteRuanganFront('${r.kode}')">Hapus</button>`]);
   document.getElementById('view-ruangan').innerHTML = `
-    <div class="grid lg:grid-cols-[360px_1fr] gap-5">
+    <div class="grid lg:grid-cols-[360px_1fr] gap-4 md:gap-5">
       <form onsubmit="saveRuanganFront(event)" class="card p-4 md:p-5 space-y-3">
         <h3 class="font-extrabold text-lg">Ruangan & Komputer</h3>
         <input id="rKode" class="field" placeholder="Kode Ruangan, contoh LAB-1" required>
@@ -1285,7 +1303,7 @@ async function loadRuangan() {
         <textarea id="rKet" class="field" placeholder="Keterangan"></textarea>
         <button class="btn btn-danger w-full">Simpan Ruangan</button>
       </form>
-      <div>${table(['Kode','Nama Ruangan','Lokasi','Kapasitas','Status','Keterangan','Aksi'], rooms.map(r => [r.kode,r.nama,r.lokasi,r.kapasitas,r.status,r.keterangan, `<button class="btn btn-light" onclick='editRuangan(${JSON.stringify(r)})'>Edit</button> <button class="btn btn-danger" onclick="deleteRuanganFront('${r.kode}')">Hapus</button>`]))}</div>
+      <div class="min-w-0">${responsiveDataView(headers, rows)}</div>
     </div>`;
 }
 
@@ -1329,6 +1347,22 @@ function miniInfo(label, value, icon) {
 
 function infoRow(k, v) {
   return `<div class="flex justify-between gap-3 border-b border-slate-100 pb-2"><span class="font-bold text-epBlue">${k}</span><span class="text-right">${v || '-'}</span></div>`;
+}
+
+function responsiveDataView(headers, rows) {
+  const desktop = `<div class="desktop-table">${table(headers, rows)}</div>`;
+  const mobile = `<div class="mobile-cards">${rows.length ? rows.map(row => `
+    <div class="card p-4">
+      ${headers.map((header, i) => {
+        const value = row[i] || '-';
+        const isAction = String(header).toLowerCase() === 'aksi';
+        return `<div class="mobile-card-row ${isAction ? 'block' : ''}">
+          <span>${header}</span>
+          <span class="${isAction ? 'flex flex-col gap-2 items-stretch w-full text-right' : ''}">${value}</span>
+        </div>`;
+      }).join('')}
+    </div>`).join('') : `<div class="card p-4 text-sm text-slate-500">Belum ada data.</div>`}</div>`;
+  return desktop + mobile;
 }
 
 function table(headers, rows) {
