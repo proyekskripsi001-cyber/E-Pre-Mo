@@ -51,20 +51,22 @@
     #mobileOverlay { transition: opacity .2s ease; }
     @media (max-width: 1024px) { .lab-grid { grid-template-columns: repeat(3, minmax(76px, 1fr)); gap: 14px; } }
     @media (max-width: 768px) {
-      body { background: #F5F7FB; }
+      html, body { width: 100%; max-width: 100%; overflow-x: hidden; background: #F5F7FB; }
       #sidebar { transform: translateX(-100%); width: min(82vw, 320px); z-index: 50; }
       #sidebar.open { transform: translateX(0); }
       #mobileOverlay.open { display: block; opacity: 1; }
-      .app-main { margin-left: 0 !important; }
+      .app-main { margin-left: 0 !important; width: 100% !important; min-width: 0; overflow-x: hidden; }
       .app-header { height: auto; min-height: 64px; padding: 10px 14px; gap: 10px; align-items: flex-start; }
       .app-title { font-size: 16px; line-height: 1.2; }
       .app-subtitle { display: none; }
-      .app-actions { gap: 8px; }
+      .app-actions { gap: 8px; align-items: center; }
       .app-actions .session-label { display: none; }
-      .content-wrap { padding: 14px 12px 18px; }
-      footer.app-footer { grid-template-columns: 1fr; padding: 18px; font-size: 12px; }
+      .content-wrap { padding: 14px 12px 18px; width: 100%; max-width: 100%; overflow-x: hidden; }
+      footer.app-footer { grid-template-columns: 1fr; padding: 18px; font-size: 12px; width: 100%; max-width: 100%; }
       .card { border-radius: 8px; }
-      .btn { min-height: 42px; width: 100%; display: inline-flex; align-items: center; justify-content: center; white-space: normal; text-align: center; }
+      .btn { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; white-space: normal; text-align: center; }
+      form .btn, .card > .btn, .mobile-full-btn { width: 100%; }
+      .app-header .btn { width: 44px; min-width: 44px; padding-left: 0; padding-right: 0; }
       .field { font-size: 14px; min-height: 42px; }
       table .btn { margin: 2px 0; padding: 8px 10px; min-height: 36px; }
       .swal2-popup { width: min(94vw, 420px) !important; }
