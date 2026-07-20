@@ -1451,17 +1451,169 @@ function reportFilters() {
     role: val('reportRole')
   };
 }
+function mergeJamMasukKeluar(headers, rows) {
+  const normalizedHeaders = headers.map(header =>
+    String(header)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+  );
 
-async function previewReport(e) {
+  const tanggalIndex = normalizedHeaders.indexOf('tanggal');
+  const jamMasukIndex = normalizedHeaders.indexOf('jam masuk');
+  const jamKeluarIndex = normalizedHeaders.indexOf('jam keluar');
+
+  const identitasIndex = normalizedHeaders.findIndex(header =>
+    ['nim/nidn', 'nim', 'nidn', 'identifier'].includes(header)
+  );
+
+  const ruanganIndex = normalizedHeaders.findIndex(header =>
+    ['kode ruangan', 'ruangan'].includes(header)
+  );
+
+  const komputerIndex = normalizedHeaders.findIndex(header =>
+    ['nomor komputer', 'komputer'].includes(header)
+  );
+
+  /*
+   * Jika bukan laporan penggunaan yang mempunyai kolom
+   * jam masuk dan jam keluar, data tidak perlu diubah.
+   */
+  if (
+    tanggalIndex === -1 ||
+    jamMasukIndex === -1 ||
+    jamKeluarIndex === -1
+  ) {
+    return rows;
+  }
+
+  const isEmptyValue = value => {
+    const text = String(value ?? '').trim();
+
+    return (
+      text === '' ||
+      text === '-' ||
+      text.toLowerCase() === 'null' ||
+      text.toLowerCase() === 'undefined'
+    );
+  };
+
+  const getValue = (row, index) => {
+    if (index === -1) return '';
+    return String(row[index] ?? '').trim();
+  };
+
+  const createKey = row => [
+    getValue(row, tanggalIndex),
+    getValue(row, identitasIndex),
+    getValue(row, ruanganIndex),
+    getValue(row, komputerIndex)
+  ].join('|');
+
+  const result = [];
+
+  rows.forEach(originalRow => {
+    const row = [...originalRow];
+
+    const memilikiJamMasuk = !isEmptyValue(row[jamMasukIndex]);
+    const memilikiJamKeluar = !isEmptyValue(row[jamKeluarIndex]);
+    const rowKey = createKey(row);
+
+    /*
+     * Baris hanya berisi jam keluar:
+     * cari baris jam masuk sebelumnya dengan pengguna,
+     * tanggal, ruangan, dan komputer yang sama.
+     */
+    if (!memilikiJamMasuk && memilikiJamKeluar) {
+      let pasanganIndex = -1;
+
+      for (let i = result.length - 1; i >= 0; i--) {
+        const kandidat = result[i];
+
+        const keySama = createKey(kandidat) === rowKey;
+        const adaJamMasuk = !isEmptyValue(kandidat[jamMasukIndex]);
+        const belumAdaJamKeluar = isEmptyValue(kandidat[jamKeluarIndex]);
+
+        if (keySama && adaJamMasuk && belumAdaJamKeluar) {
+          pasanganIndex = i;
+          break;
+        }
+      }
+
+      if (pasanganIndex !== -1) {
+        const pasangan = result[pasanganIndex];
+
+        pasangan[jamKeluarIndex] = row[jamKeluarIndex];
+
+        /*
+         * Lengkapi data kosong pada baris jam masuk
+         * menggunakan data dari baris jam keluar.
+         */
+        row.forEach((value, index) => {
+          if (
+            isEmptyValue(pasangan[index]) &&
+            !isEmptyValue(value)
+          ) {
+            pasangan[index] = value;
+          }
+        });
+
+        return;
+      }
+    }
+
+    result.push(row);
+  });
+
+  return result;
+}
+  async function previewReport(e) {
   if (e) e.preventDefault();
+
   showLoading();
-  const res = await gs('getReportData', token, reportFilters());
+
+  const res = await gs(
+    'getReportData',
+    token,
+    reportFilters()
+  );
+
   showLoading(false);
-  if (!res.success) return Swal.fire('Gagal', res.message, 'error');
+
+  if (!res.success) {
+    return Swal.fire(
+      'Gagal',
+      res.message,
+      'error'
+    );
+  }
+
+  const jenisLaporan = val('reportType');
+
+  const reportRows =
+    jenisLaporan === 'penggunaan'
+      ? mergeJamMasukKeluar(
+          res.headers || [],
+          res.data || []
+        )
+      : (res.data || []);
+
   document.getElementById('reportSummary').innerHTML = `
-    <h3 class="font-extrabold text-lg">Pratinjau Laporan</h3>
-    <p class="text-sm text-slate-500">${res.total} data ditemukan. Data ini bisa disimpan sebagai arsip ke folder Google Drive.</p>`;
-  document.getElementById('reportTable').innerHTML = responsiveDataView(res.headers, res.data);
+    <h3 class="font-extrabold text-lg">
+      Pratinjau Laporan
+    </h3>
+
+    <p class="text-sm text-slate-500">
+      ${reportRows.length} data ditemukan.
+      Data ini bisa disimpan sebagai arsip ke folder Google Drive.
+    </p>
+  `;
+
+  document.getElementById('reportTable').innerHTML =
+    responsiveDataView(
+      res.headers || [],
+      reportRows
+    );
 }
 
 async function archiveCurrentReport() {
