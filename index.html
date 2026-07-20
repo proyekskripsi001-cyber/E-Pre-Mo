@@ -750,7 +750,7 @@ async function refreshMonitoringData() {
           ${miniInfo('Mata Kuliah', d.penggunaan.mataKuliah, 'fa-book-open')}
           ${miniInfo('Keperluan', d.penggunaan.keperluan, 'fa-clipboard-list')}
         </div>
-        ${currentUser.role === 'admin' && d.penggunaan.status === 'Sedang Digunakan' ? `<button onclick="closeRoomManual('${d.ruangan.kode}')" class="btn btn-danger mb-4">Batalkan/Tutup Penggunaan Ruangan Manual</button>` : ''}
+        ${['admin', 'dosen'].includes(currentUser.role) && d.penggunaan.status === 'Sedang Digunakan'  ? `<button onclick="finishRoomUsage('${d.ruangan.kode}')"class="btn btn-danger mb-4"><i class="fa-solid fa-circle-stop mr-2"></i>${currentUser.role === 'dosen'  ? 'Selesai Menggunakan Ruangan'  : 'Tutup Penggunaan Ruangan'  } </button> ` : ''}
         <div class="card p-3 md:p-5 overflow-auto">
           <div class="mx-auto max-w-4xl min-w-[320px]">
             <div class="h-10 bg-gradient-to-b from-slate-700 to-slate-900 rounded text-white flex items-center justify-center text-xs font-extrabold mb-6 shadow">MONITOR / LCD PROYEKTOR</div>
@@ -777,14 +777,41 @@ async function refreshMonitoringData() {
     </div>`;
 }
 
-async function closeRoomManual(kodeRuangan) {
-  const ask = await Swal.fire({ title: 'Tutup penggunaan ruangan?', text: 'Gunakan jika dosen lupa mematikan proses penggunaan ruangan.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Tutup Manual' });
-  if (!ask.isConfirmed) return;
-  const res = await gs('closeRoomUsage', token, kodeRuangan);
-  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
-  if (res.success) refreshMonitoringData();
-}
+async function finishRoomUsage(kodeRuangan) {
+  const ask = await Swal.fire({
+    title: 'Selesaikan penggunaan ruangan?',
+    text: 'Jam selesai akan dicatat dan seluruh komputer pada ruangan ini akan dikosongkan.',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Selesai',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#E21B2D'
+  });
 
+  if (!ask.isConfirmed) return;
+
+  showLoading();
+
+  const res = await gs(
+    'closeRoomUsage',
+    token,
+    kodeRuangan
+  );
+
+  showLoading(false);
+
+  await Swal.fire(
+    res.success ? 'Berhasil' : 'Gagal',
+    res.message,
+    res.success ? 'success' : 'error'
+  );
+
+  if (res.success) {
+    selectedComputer = null;
+    await refreshMonitoringData();
+  }
+}
+  
 function pcSeat(pc) {
   const cls = pc.status === 'Digunakan' ? 'used' : pc.status === 'Maintenance' ? 'maintenance' : '';
   const sel = selectedComputer && selectedComputer.nomor === pc.nomor ? 'selected' : '';
@@ -969,32 +996,147 @@ async function processQrValue(value, source) {
     if (!reason.isConfirmed || !reason.value) return;
     manualReason = reason.value;
   }
-
+  let keperluan = payload.keperluan || '';
   let mataKuliah = payload.mataKuliah || '';
   let dosen = payload.dosen || '';
   if (currentUser.role === 'mahasiswa') {
-    const dosenOptions = [...new Set(subjects.map(s => s.dosen).filter(Boolean))];
-    const form = await Swal.fire({
-      title: 'Presensi Komputer ' + pad2(nomor),
-      html: `
-        <p class="text-sm">Ruangan: <b>${room}</b></p>
-        <select id="qrSubject" class="swal2-input"><option value="">Pilih Mata Kuliah</option>${subjects.map(s => `<option>${s.nama}</option>`).join('')}</select>
-        <select id="qrDosen" class="swal2-input"><option value="">Pilih Dosen</option>${dosenOptions.map(d => `<option>${d}</option>`).join('')}</select>`,
-      showCancelButton: true,
-      confirmButtonText: 'Submit Presensi',
-      preConfirm: () => {
-        const mk = document.getElementById('qrSubject').value;
-        const ds = document.getElementById('qrDosen').value;
-        if (!mk || !ds) {
-          Swal.showValidationMessage('Pilih dosen dan mata kuliah terlebih dahulu.');
-          return false;
-        }
-        return { mataKuliah: mk, dosen: ds };
+  const dosenOptions = [
+    ...new Set(
+      subjects
+        .map(subject => subject.dosen)
+        .filter(Boolean)
+    )
+  ];
+
+  const form = await Swal.fire({
+    title: 'Presensi Komputer ' + pad2(nomor),
+
+    html: `
+      <div style="text-align:left; padding:0 12px;">
+        <p style="margin-bottom:14px; color:#64748b; font-size:13px;">
+          Ruangan:
+          <b style="color:#0B3A75;">${room}</b>
+        </p>
+
+        <label
+          for="qrPurpose"
+          style="display:block; margin-bottom:6px; font-size:12px; font-weight:700;"
+        >
+          Keperluan
+        </label>
+
+        <select
+          id="qrPurpose"
+          class="swal2-select"
+          style="display:block; width:100%; margin:0 0 14px;"
+        >
+          <option value="">Pilih Keperluan</option>
+          <option value="Praktik">Praktik</option>
+          <option value="Materi">Materi</option>
+          <option value="Penelitian">Penelitian</option>
+        </select>
+
+        <label
+          for="qrSubject"
+          style="display:block; margin-bottom:6px; font-size:12px; font-weight:700;"
+        >
+          Mata Kuliah
+        </label>
+
+        <select
+          id="qrSubject"
+          class="swal2-select"
+          style="display:block; width:100%; margin:0 0 14px;"
+        >
+          <option value="">Pilih Mata Kuliah</option>
+
+          ${subjects
+            .map(subject => `
+              <option value="${subject.nama}">
+                ${subject.nama}
+              </option>
+            `)
+            .join('')}
+        </select>
+
+        <label
+          for="qrDosen"
+          style="display:block; margin-bottom:6px; font-size:12px; font-weight:700;"
+        >
+          Dosen Penanggung Jawab
+        </label>
+
+        <select
+          id="qrDosen"
+          class="swal2-select"
+          style="display:block; width:100%; margin:0;"
+        >
+          <option value="">Pilih Dosen</option>
+
+          ${dosenOptions
+            .map(namaDosen => `
+              <option value="${namaDosen}">
+                ${namaDosen}
+              </option>
+            `)
+            .join('')}
+        </select>
+      </div>
+    `,
+
+    showCancelButton: true,
+    confirmButtonText: 'Submit Presensi',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#0B3A75',
+
+    preConfirm: () => {
+      const purpose =
+        document.getElementById('qrPurpose').value;
+
+      const subject =
+        document.getElementById('qrSubject').value;
+
+      const lecturer =
+        document.getElementById('qrDosen').value;
+
+      if (!purpose) {
+        Swal.showValidationMessage(
+          'Pilih keperluan penggunaan komputer.'
+        );
+
+        return false;
       }
-    });
-    if (!form.isConfirmed) return;
-    mataKuliah = form.value.mataKuliah;
-    dosen = form.value.dosen;
+
+      if (!subject) {
+        Swal.showValidationMessage(
+          'Pilih mata kuliah terlebih dahulu.'
+        );
+
+        return false;
+      }
+
+      if (!lecturer) {
+        Swal.showValidationMessage(
+          'Pilih dosen penanggung jawab.'
+        );
+
+        return false;
+      }
+
+      return {
+        keperluan: purpose,
+        mataKuliah: subject,
+        dosen: lecturer
+      };
+    }
+  });
+
+  if (!form.isConfirmed) return;
+
+  keperluan = form.value.keperluan;
+  mataKuliah = form.value.mataKuliah;
+  dosen = form.value.dosen;
+}
   } else {
     const confirm = await Swal.fire({
       title: 'Gunakan Komputer ' + pad2(nomor) + '?',
@@ -1012,7 +1154,7 @@ async function processQrValue(value, source) {
     qrText: source === 'manual' ? '' : value,
     qrSource: source,
     manualReason,
-    keperluan: payload.keperluan || 'Praktik',
+    keperluan: keperluan || 'Praktik',
     mataKuliah,
     dosen
   });
@@ -1451,34 +1593,25 @@ function reportFilters() {
     role: val('reportRole')
   };
 }
-function mergeJamMasukKeluar(headers, rows) {
-  const normalizedHeaders = headers.map(header =>
+  function mergeJamMasukKeluar(headers, rows) {
+  const headerNames = headers.map(header =>
     String(header)
       .trim()
       .toLowerCase()
       .replace(/\s+/g, ' ')
   );
 
-  const tanggalIndex = normalizedHeaders.indexOf('tanggal');
-  const jamMasukIndex = normalizedHeaders.indexOf('jam masuk');
-  const jamKeluarIndex = normalizedHeaders.indexOf('jam keluar');
+  const tanggalIndex = headerNames.indexOf('tanggal');
+  const jamMasukIndex = headerNames.indexOf('jam masuk');
+  const jamKeluarIndex = headerNames.indexOf('jam keluar');
 
-  const identitasIndex = normalizedHeaders.findIndex(header =>
-    ['nim/nidn', 'nim', 'nidn', 'identifier'].includes(header)
+  const identitasIndex = headerNames.findIndex(header =>
+    header.includes('nim') ||
+    header.includes('nidn') ||
+    header.includes('identitas') ||
+    header.includes('identifier')
   );
 
-  const ruanganIndex = normalizedHeaders.findIndex(header =>
-    ['kode ruangan', 'ruangan'].includes(header)
-  );
-
-  const komputerIndex = normalizedHeaders.findIndex(header =>
-    ['nomor komputer', 'komputer'].includes(header)
-  );
-
-  /*
-   * Jika bukan laporan penggunaan yang mempunyai kolom
-   * jam masuk dan jam keluar, data tidak perlu diubah.
-   */
   if (
     tanggalIndex === -1 ||
     jamMasukIndex === -1 ||
@@ -1487,72 +1620,86 @@ function mergeJamMasukKeluar(headers, rows) {
     return rows;
   }
 
-  const isEmptyValue = value => {
-    const text = String(value ?? '').trim();
+  const kosong = value => {
+    const text = String(value ?? '').trim().toLowerCase();
 
     return (
       text === '' ||
       text === '-' ||
-      text.toLowerCase() === 'null' ||
-      text.toLowerCase() === 'undefined'
+      text === 'null' ||
+      text === 'undefined'
     );
   };
 
-  const getValue = (row, index) => {
-    if (index === -1) return '';
-    return String(row[index] ?? '').trim();
-  };
-
-  const createKey = row => [
-    getValue(row, tanggalIndex),
-    getValue(row, identitasIndex),
-    getValue(row, ruanganIndex),
-    getValue(row, komputerIndex)
-  ].join('|');
-
-  const result = [];
+  const hasil = [];
 
   rows.forEach(originalRow => {
     const row = [...originalRow];
 
-    const memilikiJamMasuk = !isEmptyValue(row[jamMasukIndex]);
-    const memilikiJamKeluar = !isEmptyValue(row[jamKeluarIndex]);
-    const rowKey = createKey(row);
+    const tanggal = String(row[tanggalIndex] ?? '').trim();
+    const identitas =
+      identitasIndex !== -1
+        ? String(row[identitasIndex] ?? '').trim()
+        : '';
+
+    const adaJamMasuk = !kosong(row[jamMasukIndex]);
+    const adaJamKeluar = !kosong(row[jamKeluarIndex]);
 
     /*
-     * Baris hanya berisi jam keluar:
-     * cari baris jam masuk sebelumnya dengan pengguna,
-     * tanggal, ruangan, dan komputer yang sama.
+     * Jika baris hanya memiliki jam keluar,
+     * cari baris jam masuk sebelumnya.
      */
-    if (!memilikiJamMasuk && memilikiJamKeluar) {
+    if (!adaJamMasuk && adaJamKeluar) {
       let pasanganIndex = -1;
 
-      for (let i = result.length - 1; i >= 0; i--) {
-        const kandidat = result[i];
+      for (let i = hasil.length - 1; i >= 0; i--) {
+        const kandidat = hasil[i];
 
-        const keySama = createKey(kandidat) === rowKey;
-        const adaJamMasuk = !isEmptyValue(kandidat[jamMasukIndex]);
-        const belumAdaJamKeluar = isEmptyValue(kandidat[jamKeluarIndex]);
+        const tanggalKandidat =
+          String(kandidat[tanggalIndex] ?? '').trim();
 
-        if (keySama && adaJamMasuk && belumAdaJamKeluar) {
+        const identitasKandidat =
+          identitasIndex !== -1
+            ? String(kandidat[identitasIndex] ?? '').trim()
+            : '';
+
+        const tanggalSama =
+          tanggalKandidat === tanggal;
+
+        const identitasSama =
+          identitasIndex === -1 ||
+          identitasKandidat === identitas;
+
+        const memilikiJamMasuk =
+          !kosong(kandidat[jamMasukIndex]);
+
+        const belumMemilikiJamKeluar =
+          kosong(kandidat[jamKeluarIndex]);
+
+        if (
+          tanggalSama &&
+          identitasSama &&
+          memilikiJamMasuk &&
+          belumMemilikiJamKeluar
+        ) {
           pasanganIndex = i;
           break;
         }
       }
 
       if (pasanganIndex !== -1) {
-        const pasangan = result[pasanganIndex];
+        const pasangan = hasil[pasanganIndex];
 
-        pasangan[jamKeluarIndex] = row[jamKeluarIndex];
+        pasangan[jamKeluarIndex] =
+          row[jamKeluarIndex];
 
         /*
-         * Lengkapi data kosong pada baris jam masuk
-         * menggunakan data dari baris jam keluar.
+         * Isi kolom lain jika data pada baris pertama kosong.
          */
         row.forEach((value, index) => {
           if (
-            isEmptyValue(pasangan[index]) &&
-            !isEmptyValue(value)
+            kosong(pasangan[index]) &&
+            !kosong(value)
           ) {
             pasangan[index] = value;
           }
@@ -1562,10 +1709,10 @@ function mergeJamMasukKeluar(headers, rows) {
       }
     }
 
-    result.push(row);
+    hasil.push(row);
   });
 
-  return result;
+  return hasil;
 }
   async function previewReport(e) {
   if (e) e.preventDefault();
@@ -1590,13 +1737,10 @@ function mergeJamMasukKeluar(headers, rows) {
 
   const jenisLaporan = val('reportType');
 
-  const reportRows =
-    jenisLaporan === 'penggunaan'
-      ? mergeJamMasukKeluar(
-          res.headers || [],
-          res.data || []
-        )
-      : (res.data || []);
+  const reportRows = mergeJamMasukKeluar(
+  res.headers || [],
+  res.data || []
+);
 
   document.getElementById('reportSummary').innerHTML = `
     <h3 class="font-extrabold text-lg">
