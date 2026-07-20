@@ -605,21 +605,31 @@ async function handleLogin(e) {
     currentUser = res;
     localStorage.setItem('epremo_token', token);
     localStorage.setItem('epremo_user', JSON.stringify(res));
-    bootApp();
+    bootApp(true);
   } catch (err) {
     showLoading(false);
     Swal.fire('Error', String(err), 'error');
   }
 }
 
-function bootApp() {
+function bootApp(isFreshLogin = false) {
   document.getElementById('loginPage').classList.add('hidden');
   document.getElementById('appPage').classList.remove('hidden');
   document.getElementById('navUserName').textContent = currentUser.nama;
   document.getElementById('navUserRole').textContent = currentUser.role;
   renderMenu();
-  const savedView = localStorage.getItem('epremo_last_view_' + currentUser.role) || 'dashboard';
-  preloadData().then(() => showView(savedView));
+  const roleMenu = menuByRole[currentUser.role] || menuByRole.mahasiswa;
+  const allowedViews = roleMenu.map(item => item[0]);
+  const storedView = localStorage.getItem('epremo_last_view_' + currentUser.role);
+  const initialView = !isFreshLogin && allowedViews.includes(storedView)
+    ? storedView
+    : 'dashboard';
+
+  if (isFreshLogin) {
+    localStorage.setItem('epremo_last_view_' + currentUser.role, 'dashboard');
+  }
+
+  preloadData().then(() => showView(initialView));
 }
 
 function renderMenu() {
@@ -2051,9 +2061,19 @@ setInterval(checkQrResult, 1200);
 loadAppLogo();
 
 const savedUser = localStorage.getItem('epremo_user');
-if (token && savedUser) {
+const navigationEntry = performance.getEntriesByType('navigation')[0];
+const isPageRefresh = navigationEntry
+  ? navigationEntry.type === 'reload'
+  : performance.navigation && performance.navigation.type === 1;
+
+if (token && savedUser && isPageRefresh) {
   currentUser = JSON.parse(savedUser);
-  bootApp();
+  bootApp(false);
+} else if (!isPageRefresh) {
+  token = '';
+  currentUser = null;
+  localStorage.removeItem('epremo_token');
+  localStorage.removeItem('epremo_user');
 }
 </script>
 </body>
