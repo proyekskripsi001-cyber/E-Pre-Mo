@@ -213,6 +213,67 @@
   white-space: normal;
 }
 
+.archive-list {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.archive-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #DDE5F2;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+
+.archive-item:hover {
+  border-color: #0B3A75;
+  box-shadow: 0 8px 20px rgba(15,23,42,.07);
+  transform: translateY(-1px);
+}
+
+.archive-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #E8EEF8;
+  color: #0B3A75;
+}
+
+.archive-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.archive-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 5px;
+  color: #64748B;
+  font-size: 11px;
+}
+
+.archive-file {
+  margin-top: 5px;
+  color: #94A3B8;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Tampilan mobile */
 @media (max-width: 768px) {
   #view-laporan > .grid > .space-y-5 {
@@ -224,6 +285,35 @@
   #reportTable {
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  .archive-panel {
+    width: 100%;
+    padding: 16px !important;
+  }
+
+  .archive-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    gap: 12px;
+  }
+
+  .archive-item {
+    width: 100%;
+    align-items: flex-start;
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(15,23,42,.05);
+  }
+
+  .archive-item:active {
+    transform: scale(.99);
+  }
+
+  .archive-file {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
     #sidebar { transition: transform .25s ease; }
@@ -1326,23 +1416,71 @@ async function loadPemesanan() {
 
 async function submitRoomUsage(e) {
   e.preventDefault();
+
   if (!pendingRoomQr) {
     Swal.fire('QR Belum Ada', 'Scan QR pintu lab terlebih dahulu.', 'warning');
     return;
   }
-  const res = await gs('startRoomUsage', token, {
-    qrText: pendingRoomQr,
-    kodeRuangan: pendingRoomCode,
-    keperluan: val('roomPurpose'),
-    mataKuliah: val('roomSubject'),
-    dosen: val('roomDosen')
+
+  const kodeRuangan = pendingRoomCode;
+  const keperluan = val('roomPurpose');
+  const mataKuliah = val('roomSubject');
+  const dosen = val('roomDosen');
+  const sekarang = new Date();
+  const tanggal = sekarang.toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Jakarta'
   });
-  Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
-  if (res.success) {
-    pendingRoomQr = '';
-    pendingRoomCode = '';
-    loadPemesanan();
+  const jamMulai = sekarang.toLocaleTimeString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    hour12: false
+  });
+
+  showLoading();
+
+  const penggunaan = await gs('startRoomUsage', token, {
+    qrText: pendingRoomQr,
+    kodeRuangan,
+    keperluan,
+    mataKuliah,
+    dosen
+  });
+
+  if (!penggunaan.success) {
+    showLoading(false);
+    return Swal.fire('Gagal', penggunaan.message, 'error');
   }
+
+  const pemesanan = await gs('createBooking', token, {
+    tanggal,
+    jamMulai,
+    jamSelesai: '',
+    kodeRuangan,
+    nomorKomputer: '',
+    nama: currentUser.nama,
+    identifier: currentUser.identifier || '',
+    keperluan,
+    catatan: mataKuliah ? 'Mata Kuliah: ' + mataKuliah : ''
+  });
+
+  showLoading(false);
+  pendingRoomQr = '';
+  pendingRoomCode = '';
+
+  if (!pemesanan.success) {
+    await Swal.fire(
+      'Penggunaan Aktif',
+      'Ruangan berhasil digunakan, tetapi data laporan gagal disimpan: ' + pemesanan.message,
+      'warning'
+    );
+  } else {
+    await Swal.fire(
+      'Berhasil',
+      'Penggunaan ruangan aktif dan data laporan berhasil disimpan.',
+      'success'
+    );
+  }
+
+  loadPemesanan();
 }
 
 async function loadRegistrasiKhusus() {
@@ -1559,14 +1697,27 @@ async function loadLaporan() {
             <button class="btn btn-danger" type="button" onclick="archiveCurrentReport()"><i class="fa-solid fa-folder-plus mr-2"></i>Arsipkan</button>
           </div>
         </form>
-        <div class="card p-4 md:p-5">
-          <h3 class="font-extrabold text-lg mb-3">Arsip Tersimpan</h3>
-          <div class="space-y-2 max-h-[420px] overflow-auto">
+        <div class="archive-panel card p-4 md:p-5">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 class="font-extrabold text-lg">Arsip Tersimpan</h3>
+              <p class="text-xs text-slate-500 mt-1">Ketuk arsip untuk membuka file.</p>
+            </div>
+            <span class="booking-count">${(archive.data || []).length} arsip</span>
+          </div>
+          <div class="archive-list">
             ${(archive.data || []).length ? archive.data.map(a => `
-              <a href="${a.url}" target="_blank" class="block border border-slate-200 rounded-lg p-3 hover:border-epBlue">
-                <p class="font-extrabold text-sm text-epBlue">${a.jenis}</p>
-                <p class="text-xs text-slate-500">${a.tanggal} | ${a.jumlah} data</p>
-                <p class="text-xs text-slate-400 truncate">${a.file}</p>
+              <a href="${a.url}" target="_blank" rel="noopener noreferrer" class="archive-item">
+                <span class="archive-icon"><i class="fa-solid fa-file-arrow-down"></i></span>
+                <span class="archive-content">
+                  <span class="block font-extrabold text-sm text-epBlue">${a.jenis}</span>
+                  <span class="archive-meta">
+                    <span><i class="fa-regular fa-calendar mr-1"></i>${a.tanggal}</span>
+                    <span><i class="fa-solid fa-database mr-1"></i>${a.jumlah} data</span>
+                  </span>
+                  <span class="archive-file block">${a.file}</span>
+                </span>
+                <i class="fa-solid fa-chevron-right text-xs text-slate-400 mt-3"></i>
               </a>`).join('') : '<p class="text-sm text-slate-400">Belum ada arsip laporan.</p>'}
           </div>
         </div>
