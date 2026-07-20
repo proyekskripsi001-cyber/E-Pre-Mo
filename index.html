@@ -47,6 +47,123 @@
     .field { width: 100%; border: 1px solid #D8E0EF; border-radius: 8px; padding: 10px 12px; font-size: 13px; background: #fff; outline: none; }
     .field:focus { border-color: #0B3A75; box-shadow: 0 0 0 3px rgba(11,58,117,.12); }
     .card { background: #fff; border: 1px solid #DDE5F2; border-radius: 8px; box-shadow: 0 10px 22px rgba(15,23,42,.05); }
+    .booking-form-card {
+  overflow: hidden;
+}
+
+.booking-form-header {
+  background: linear-gradient(135deg, #0B3A75, #082B58);
+  color: #fff;
+  margin: -20px -20px 20px;
+  padding: 20px;
+}
+
+.booking-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.booking-label i {
+  width: 18px;
+  color: #0B3A75;
+}
+
+.booking-qr-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 11px 12px;
+  border: 1px solid #D8E0EF;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.booking-qr-status.ready {
+  border-color: #86EFAC;
+  background: #F0FDF4;
+  color: #166534;
+}
+
+.booking-history-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.booking-count {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #E8EEF8;
+  color: #0B3A75;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.booking-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #EEF2F7;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .booking-page {
+    gap: 14px;
+  }
+
+  .booking-form-card {
+    padding: 16px !important;
+  }
+
+  .booking-form-header {
+    margin: -16px -16px 16px;
+    padding: 18px 16px;
+  }
+
+  .booking-history {
+    min-width: 0;
+  }
+
+  .booking-history-title {
+    align-items: flex-start;
+    margin: 4px 2px 12px;
+  }
+
+  .booking-history .mobile-cards {
+    display: grid !important;
+    gap: 12px;
+  }
+
+  .booking-history .mobile-cards .card {
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+  }
+
+  .booking-history .mobile-card-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .booking-history .mobile-card-row:first-child {
+    padding-top: 0;
+  }
+}
     #sidebar { transition: transform .25s ease; }
     #mobileOverlay { transition: opacity .2s ease; }
     @media (max-width: 1024px) { .lab-grid { grid-template-columns: repeat(3, minmax(76px, 1fr)); gap: 14px; } }
@@ -797,24 +914,158 @@ async function processQrValue(value, source) {
   Swal.fire(res.success ? 'Berhasil' : 'Gagal', res.message, res.success ? 'success' : 'error');
   if (currentView === 'monitoring') refreshMonitoringData();
 }
-
 async function loadPemesanan() {
-  if (currentUser.role === 'pengguna_khusus') return loadRegistrasiKhusus();
+  if (currentUser.role === 'pengguna_khusus') {
+    return loadRegistrasiKhusus();
+  }
+
   const res = await gs('getBookingList', token);
+  const bookings = res.data || [];
+
+  const bookingRows = bookings.map(d => [
+    d.tanggal,
+    d.jamMulai + ' - ' + d.jamSelesai,
+    d.kodeRuangan,
+    d.nomorKomputer || '-',
+    d.nama,
+    d.keperluan,
+    `<span class="booking-status">${d.status || '-'}</span>`
+  ]);
+
   document.getElementById('view-pemesanan').innerHTML = `
-    <div class="grid lg:grid-cols-[360px_1fr] gap-5">
-      <form onsubmit="submitRoomUsage(event)" class="card p-5 space-y-3">
-        <h3 class="font-extrabold text-lg">Pemesanan Ruangan Dosen</h3>
-        <p class="text-sm text-slate-500">Scan QR Code yang ditempel pada pintu laboratorium, lalu pilih keperluan dan mata kuliah.</p>
-        <button type="button" onclick="openScanner()" class="btn btn-primary w-full">Scan QR Pintu Lab</button>
-        <input id="roomQrStatus" class="field" readonly value="${pendingRoomCode ? 'QR terbaca: ' + pendingRoomCode : 'Belum scan QR ruangan'}">
-        <select id="roomPurpose" class="field"><option>Praktik</option><option>Materi</option><option>Penelitian</option></select>
-        <select id="roomSubject" class="field"><option value="">Pilih Mata Kuliah</option>${subjects.map(s => `<option>${s.nama}</option>`).join('')}</select>
-        <input id="roomDosen" class="field" value="${currentUser.nama || ''}" placeholder="Dosen penanggung jawab">
-        <button class="btn btn-danger w-full">Submit Penggunaan Ruangan</button>
+    <div class="booking-page grid lg:grid-cols-[360px_1fr] gap-5 items-start">
+      <form
+        onsubmit="submitRoomUsage(event)"
+        class="booking-form-card card p-5 space-y-4"
+      >
+        <div class="booking-form-header">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-calendar-check text-xl"></i>
+            </div>
+
+            <div>
+              <h3 class="font-extrabold text-lg">Pemesanan Ruangan</h3>
+              <p class="text-xs text-blue-100 mt-1">
+                Lengkapi data penggunaan laboratorium.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <span class="booking-label">
+            <i class="fa-solid fa-qrcode"></i>
+            QR Pintu Laboratorium
+          </span>
+
+          <button
+            type="button"
+            onclick="openScanner()"
+            class="btn btn-primary w-full"
+          >
+            <i class="fa-solid fa-camera mr-2"></i>
+            Scan QR Pintu Lab
+          </button>
+
+          <div
+            id="roomQrStatus"
+            class="booking-qr-status mt-2 ${pendingRoomCode ? 'ready' : ''}"
+            role="status"
+          >
+            <i class="fa-solid ${
+              pendingRoomCode ? 'fa-circle-check' : 'fa-circle-info'
+            }"></i>
+
+            <span>
+              ${
+                pendingRoomCode
+                  ? 'QR terbaca: ' + pendingRoomCode
+                  : 'Belum ada QR ruangan yang dipindai'
+              }
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label for="roomPurpose" class="booking-label">
+            <i class="fa-solid fa-clipboard-list"></i>
+            Keperluan
+          </label>
+
+          <select id="roomPurpose" class="field" required>
+            <option>Praktik</option>
+            <option>Materi</option>
+            <option>Penelitian</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="roomSubject" class="booking-label">
+            <i class="fa-solid fa-book-open"></i>
+            Mata Kuliah
+          </label>
+
+          <select id="roomSubject" class="field" required>
+            <option value="">Pilih Mata Kuliah</option>
+            ${subjects.map(s => `<option>${s.nama}</option>`).join('')}
+          </select>
+        </div>
+
+        <div>
+          <label for="roomDosen" class="booking-label">
+            <i class="fa-solid fa-user-tie"></i>
+            Dosen Penanggung Jawab
+          </label>
+
+          <input
+            id="roomDosen"
+            class="field"
+            value="${currentUser.nama || ''}"
+            placeholder="Nama dosen"
+            autocomplete="name"
+            required
+          >
+        </div>
+
+        <button class="btn btn-danger w-full">
+          <i class="fa-solid fa-paper-plane mr-2"></i>
+          Submit Penggunaan Ruangan
+        </button>
       </form>
-      <div>${table(['Tanggal','Jam','Ruangan','Komputer','Pemesan','Keperluan','Status'], (res.data || []).map(d => [d.tanggal, d.jamMulai + ' - ' + d.jamSelesai, d.kodeRuangan, d.nomorKomputer || '-', d.nama, d.keperluan, d.status]))}</div>
-    </div>`;
+
+      <div class="booking-history min-w-0">
+        <div class="booking-history-title">
+          <div>
+            <h3 class="font-extrabold text-lg text-slate-900">
+              Riwayat Pemesanan
+            </h3>
+
+            <p class="text-sm text-slate-500 mt-1">
+              Daftar penggunaan ruangan yang pernah diajukan.
+            </p>
+          </div>
+
+          <span class="booking-count">
+            ${bookings.length} data
+          </span>
+        </div>
+
+        ${responsiveDataView(
+          [
+            'Tanggal',
+            'Jam',
+            'Ruangan',
+            'Komputer',
+            'Pemesan',
+            'Keperluan',
+            'Status'
+          ],
+          bookingRows
+        )}
+      </div>
+    </div>
+  `;
 }
 
 async function submitRoomUsage(e) {
