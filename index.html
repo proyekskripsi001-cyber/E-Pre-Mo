@@ -164,6 +164,68 @@
     padding-top: 0;
   }
 }
+    /* Perbaikan halaman laporan pada desktop */
+#view-laporan > .grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+#view-laporan > .grid > .space-y-5 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+#reportTable {
+  width: 100%;
+  min-width: 0;
+}
+
+#reportTable .table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+#reportTable table {
+  width: 100%;
+  min-width: 920px;
+}
+
+#reportTable th,
+#reportTable td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+#reportTable th {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+#reportTable td {
+  font-size: 12px;
+}
+
+/* Nama boleh turun baris agar tabel tidak terlalu lebar */
+#reportTable th:nth-child(5),
+#reportTable td:nth-child(5) {
+  min-width: 190px;
+  white-space: normal;
+}
+
+/* Tampilan mobile */
+@media (max-width: 768px) {
+  #view-laporan > .grid > .space-y-5 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #reportTable {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
     #sidebar { transition: transform .25s ease; }
     #mobileOverlay { transition: opacity .2s ease; }
     @media (max-width: 1024px) { .lab-grid { grid-template-columns: repeat(3, minmax(76px, 1fr)); gap: 14px; } }
@@ -195,6 +257,49 @@
       .mobile-card-row.block span:last-child { display: flex; flex-direction: column; gap: 8px; text-align: stretch; }
       .mobile-card-row span:first-child { color: #0B3A75; font-weight: 800; flex: 0 0 42%; text-align: left; }
       .mobile-card-row span:last-child { color: #172033; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+      .booking-page {
+    gap: 14px;
+  }
+
+  .booking-form-card {
+    padding: 16px !important;
+  }
+
+  .booking-form-header {
+    margin: -16px -16px 16px;
+    padding: 18px 16px;
+  }
+
+  .booking-history {
+    min-width: 0;
+  }
+
+  .booking-history-title {
+    align-items: flex-start;
+    margin: 4px 2px 12px;
+  }
+
+  .booking-history .mobile-cards {
+    display: grid !important;
+    gap: 12px;
+  }
+
+  .booking-history .mobile-cards .card {
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(15,23,42,.07);
+  }
+
+  #view-laporan > .grid > .space-y-5 {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #reportTable {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
       .swal2-popup { width: min(94vw, 420px) !important; }
       .swal2-input, .swal2-select { width: 84% !important; max-width: 320px !important; }
       .xl\:grid-cols-\[380px_1fr\] { grid-template-columns: 1fr !important; }
